@@ -296,10 +296,10 @@ IDs and events alone is already useful.
 
 | Repo | Work | Size | Status (2026-07-09) |
 |---|---|---|---|
-| tokenfuse | accept/record `x-fuse-on-behalf-of`; NDJSON event exporter mapping existing incidents to the envelope | small — trace column + serializer | partial — `x-fuse-agent-id` carried; exporter and `x-fuse-on-behalf-of` capture in progress |
+| tokenfuse | accept/record `x-fuse-on-behalf-of`; NDJSON event exporter mapping existing incidents to the envelope | small — trace column + serializer | shipped on main, not yet in a tagged release: `x-fuse-agent-id` carried; exporter and `x-fuse-on-behalf-of` capture shipped |
 | Idryx | `OnBehalfOf` one-hop → chain; `ingest/tokenfuse` connector (§6.3); `attestation_missing` detector | medium — the connector is the real feature | shipped |
-| Engram | document `agent_id` = Passport ID; emit §6 events from reflection/contradiction paths (optional exporter) | small | shipped — `agent_id` scope only, event exporter not yet built |
-| Qryx | accept `agent_id` as evidence subject; emit findings in envelope (exporter) | small | not started |
+| Engram | document `agent_id` = Passport ID; emit §6 events from reflection/contradiction paths (optional exporter) | small | shipped: `agent_id` scope and the event exporter are both built |
+| Qryx | accept `agent_id` as evidence subject; emit findings in envelope (exporter) | small | partial: `agent_id`-as-evidence-subject shipped (`qryx agents`, `internal/agentstack`); the emitter (findings in envelope) not started |
 
 No step blocks any other; TokenFuse exporter + Idryx connector is the pair
 that proves the whole idea.

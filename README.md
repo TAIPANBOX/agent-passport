@@ -149,11 +149,11 @@ _as of 2026-07-09_
 |---|---|---|
 | Engram | shipped | MCP server accepts `agent://` IDs as an opaque `agent_id` scope |
 | Idryx | shipped | delegation chains (root-first, cycle-safe); TokenFuse NDJSON event connector; Passport-document ingestion (`--passports`); spend-correlation detector consuming the envelope; `attestation_missing` detector |
-| TokenFuse | partial | `x-fuse-agent-id` already carried; native agent-event exporter and `x-fuse-on-behalf-of` capture in progress |
-| Qryx | not started | agent-infra scanning planned |
-| Wardryx | planned | wave-2 service; policy/approval gating, event schema v0.2 |
-| Verdryx | planned | wave-2 service; evaluation and quality drift, event schema v0.2 |
-| Mockryx | planned | wave-2 service; simulation and blast-radius testing, event schema v0.2 |
+| TokenFuse | shipped | `x-fuse-agent-id` carried; native agent-event exporter and `x-fuse-on-behalf-of` capture shipped on main, not yet in a tagged release |
+| Qryx | partial | agent-infra scanning shipped (`qryx agents`, `internal/agentstack`); emitting findings as agent-event not started |
+| Wardryx | shipped | wave-2 service; policy/approval gating, event schema v0.2 |
+| Verdryx | shipped | wave-2 service; evaluation and quality drift, event schema v0.2 |
+| Mockryx | shipped | wave-2 service; simulation and blast-radius testing, event schema v0.2 |
 
 Event schema v0.2 (`schemas/agent-event.v0.2.schema.json`) opens the
 `source` field to any string and adds the wave-2 event types; the

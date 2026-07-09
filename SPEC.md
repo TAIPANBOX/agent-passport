@@ -150,6 +150,13 @@ hop is not enough. The chain is an **ordered list, root first**:
 This is the piece nobody else has: *"who acted on behalf of whom, N levels
 deep, reconstructable at audit time."*
 
+### 5.1 Cycle safety (normative)
+
+The `on_behalf_of` chain MUST be acyclic. A service appends exactly one
+entry (its own principal) to the chain it forwards, and MUST refuse to
+forward a chain that already contains its own principal. Maximum chain
+depth is 32 entries.
+
 ## 6. Event envelope
 
 One JSON object per event, NDJSON when batched. Everything any product says
@@ -173,26 +180,53 @@ about an agent fits this envelope:
 ### 6.1 Field rules
 
 - `schema`, `ts` (RFC 3339, UTC), `source`, `type`, `agent_id` — required.
+- `source`: as of schema v0.2, an open string (`type: string, minLength: 1`),
+  not a closed enum. Adding a source is additive and does not require a
+  schema bump. Consumers MUST ignore events from a `source` they do not
+  recognize rather than reject them.
 - `severity`: `info` · `low` · `medium` · `high` · `critical`.
 - `data`: free-form object, owned by the `source` product. Consumers MUST
   ignore unknown `data` keys.
 - `prev_hash`: optional; present when the emitting product maintains a
   tamper-evident chain (TokenFuse audit trail already does sha256 chaining —
-  this exposes it in the shared format).
+  this exposes it in the shared format). Canonicalization is defined
+  precisely in §6.5.
 - Unknown top-level fields MUST be ignored (forward compatibility).
+
+Registered sources today:
+
+| `source` | Product |
+|---|---|
+| `tokenfuse` | spend governance |
+| `engram` | memory governance |
+| `idryx` | identity and access governance |
+| `qryx` | cryptographic evidence |
+| `wardryx` | policy and approval gating (wave 2) |
+| `verdryx` | evaluation and quality drift (wave 2) |
+| `mockryx` | simulation and blast-radius testing (wave 2) |
+
+wardryx, verdryx, and mockryx are wave-2 services; like the original four,
+this contract governs an operator's own agents, for the operator's own
+self-protection, not third-party or adversarial traffic.
 
 ### 6.2 Initial event-type registry
 
-| `source` | `type` values (v0.1) |
+| `source` | `type` values |
 |---|---|
 | `tokenfuse` | `budget_exhausted` · `sustained_loop` · `spend_spike` · `fanout_explosion` · `breaker_tripped` · `dlp_block` · `taint_block` · `mcp_drift` |
 | `engram` | `memory_written` · `reflection_run` · `contradiction_found` · `memory_forgotten` |
 | `idryx` | `excessive_privilege` · `behavior_anomaly` · `impossible_travel` · `mfa_fatigue` · `new_device` · `blast_radius_change` · `attestation_missing` |
 | `qryx` | `crypto_finding` · `crypto_drift` · `policy_violation` · `evidence_signed` |
+| `wardryx` | `policy_allow` (info) · `policy_deny` (high) · `approval_requested` (medium) · `approval_granted` (info) · `approval_denied` (high) · `approval_timeout` (high) |
+| `verdryx` | `eval_run` (info) · `quality_score` (info) · `quality_drift` (high) |
+| `mockryx` | `sim_run` (info) · `sim_finding` (high) · `blast_radius_measured` (medium) |
 
 The first four TokenFuse types are its existing incident taxonomy verbatim —
 zero renaming. New types may be added freely within a `source`; renames or
-semantic changes require a schema version bump.
+semantic changes require a schema version bump. The `wardryx`, `verdryx`,
+and `mockryx` rows are wave-2 additions introduced alongside schema v0.2
+(§6.4); the parenthesized value after each type is its typical `severity`,
+not a schema-enforced mapping.
 
 ### 6.3 The one concrete integration this buys
 
@@ -201,6 +235,35 @@ Parquet or the Cloud SSE stream) as a behavioral source — the richest record
 of what an agent *does* is currently invisible to identity tooling. That
 connector plus this envelope is the first real cross-product feature, and it
 needs nothing from Engram or Qryx to ship.
+
+### 6.4 Versioning and compatibility
+
+Only the event schema is versioned to v0.2
+(`schemas/agent-event.v0.2.schema.json`, `schema` const
+`taipanbox.dev/agent-event/v0.2`). The Passport schema stays at v0.1,
+unchanged: Idryx hard-codes `requiredSchema =
+"taipanbox.dev/agent-passport/v0.1"`, so the Passport schema is not
+re-versioned by this change.
+
+Consumers MUST accept events whose `schema` is either
+`taipanbox.dev/agent-event/v0.1` or `taipanbox.dev/agent-event/v0.2`.
+Existing emitters (tokenfuse, engram, idryx, qryx) may keep emitting v0.1
+events; those remain valid, and nothing requires them to move. New wave-2
+services (wardryx, verdryx, mockryx) emit v0.2. The two versions differ
+only in the `source` field (closed enum in v0.1, open string in v0.2,
+§6.1); every other field is unchanged.
+
+### 6.5 `prev_hash` canonicalization
+
+Where present, `prev_hash` MUST be computed as:
+
+```
+prev_hash = "sha256:" + hex(sha256(C))
+```
+
+where `C` is the RFC 8785 (JSON Canonicalization Scheme, JCS) canonical
+serialization of the event object with the `prev_hash` field itself
+removed. Format: `^sha256:[0-9a-f]{64}$`.
 
 ## 7. Conformance (v0.1)
 

@@ -231,12 +231,12 @@ IDs and events alone is already useful.
 
 ## 9. Adoption cost estimate (per repo)
 
-| Repo | Work | Size |
-|---|---|---|
-| tokenfuse | accept/record `x-fuse-on-behalf-of`; NDJSON event exporter mapping existing incidents to the envelope | small — trace column + serializer |
-| Idryx | `OnBehalfOf` one-hop → chain; `ingest/tokenfuse` connector (§6.3); `attestation_missing` detector | medium — the connector is the real feature |
-| Engram | document `agent_id` = Passport ID; emit §6 events from reflection/contradiction paths (optional exporter) | small |
-| Qryx | accept `agent_id` as evidence subject; emit findings in envelope (exporter) | small |
+| Repo | Work | Size | Status (2026-07-09) |
+|---|---|---|---|
+| tokenfuse | accept/record `x-fuse-on-behalf-of`; NDJSON event exporter mapping existing incidents to the envelope | small — trace column + serializer | partial — `x-fuse-agent-id` carried; exporter and `x-fuse-on-behalf-of` capture in progress |
+| Idryx | `OnBehalfOf` one-hop → chain; `ingest/tokenfuse` connector (§6.3); `attestation_missing` detector | medium — the connector is the real feature | shipped |
+| Engram | document `agent_id` = Passport ID; emit §6 events from reflection/contradiction paths (optional exporter) | small | shipped — `agent_id` scope only, event exporter not yet built |
+| Qryx | accept `agent_id` as evidence subject; emit findings in envelope (exporter) | small | not started |
 
 No step blocks any other; TokenFuse exporter + Idryx connector is the pair
 that proves the whole idea.

@@ -107,6 +107,17 @@ Adopted across the TAIPANBOX agent-governance stack: TokenFuse (spend),
 Engram (memory), Idryx (access), Qryx (crypto). See SPEC.md §9 for the
 per-repo adoption cost.
 
+## Adoption status
+
+_as of 2026-07-09_
+
+| Product | Status | What shipped |
+|---|---|---|
+| Engram | shipped | MCP server accepts `agent://` IDs as an opaque `agent_id` scope |
+| Idryx | shipped | delegation chains (root-first, cycle-safe); TokenFuse NDJSON event connector; Passport-document ingestion (`--passports`); spend-correlation detector consuming the envelope; `attestation_missing` detector |
+| TokenFuse | partial | `x-fuse-agent-id` already carried; native agent-event exporter and `x-fuse-on-behalf-of` capture in progress |
+| Qryx | not started | agent-infra scanning planned |
+
 ## License
 
 Apache License 2.0 — see [`LICENSE`](./LICENSE). Copyright 2026 TAIPANBOX.

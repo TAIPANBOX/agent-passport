@@ -4,6 +4,7 @@
 
 **The thinnest possible shared fabric for AI-agent governance: one identifier, one delegation chain, one event envelope.**
 
+[![CI](https://github.com/TAIPANBOX/agent-passport/actions/workflows/ci.yml/badge.svg)](https://github.com/TAIPANBOX/agent-passport/actions/workflows/ci.yml)
 ![Version](https://img.shields.io/badge/version-0.1-4493f8.svg)
 ![Spec](https://img.shields.io/badge/type-specification-2dd4bf.svg)
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)
@@ -267,12 +268,12 @@ examples/events.ndjson               example events, one per source
 
 ## Adoption status
 
-_as of 2026-07-09_
+_as of 2026-07-12_
 
 | Product | Status | What shipped |
 |---|---|---|
-| Engram | shipped | MCP server accepts `agent://` IDs as an opaque `agent_id` scope |
-| Idryx | shipped | delegation chains (root-first, cycle-safe); TokenFuse NDJSON event connector; Passport-document ingestion (`--passports`); spend-correlation detector consuming the envelope; `attestation_missing` detector |
+| Engram | shipped | MCP server accepts `agent://` IDs as an opaque `agent_id` scope; opt-in agent-event NDJSON exporter (`memory_written` · `reflection_run` · `contradiction_found` · `memory_forgotten`), shipped on main since v2.2.0, not yet in a tagged release |
+| Idryx | shipped | delegation chains (root-first, cycle-safe); generic agent-event-bus connector ingesting TokenFuse/Wardryx/Mockryx/Verdryx NDJSON, one loader deriving `source` from each envelope rather than the `--source`/`--load` flag that selected it; Passport-document ingestion (`--passports`); spend-correlation detector consuming the envelope; `attestation_missing` detector |
 | TokenFuse | shipped | `x-fuse-agent-id` carried; native agent-event exporter and `x-fuse-on-behalf-of` capture shipped on main, not yet in a tagged release |
 | Qryx | partial | agent-infra scanning shipped (`qryx agents`, `internal/agentstack`); emitting findings as agent-event not started |
 | Wardryx | shipped | wave-2 service; policy/approval gating, event schema v0.2 |

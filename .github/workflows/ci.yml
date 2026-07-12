@@ -1,0 +1,26 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      - name: Install jsonschema
+        run: pip install "jsonschema>=4.18"
+      - name: Validate JSON syntax (schemas + examples)
+        run: |
+          for f in schemas/*.json examples/*.json; do
+            echo "checking $f"
+            python -m json.tool "$f" > /dev/null
+          done
+      - name: Validate schemas are valid draft 2020-12 JSON Schema, and examples conform to them
+        run: python .github/scripts/validate_examples.py

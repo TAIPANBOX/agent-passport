@@ -1,8 +1,8 @@
-# Agent Passport — shared identity & event schema
+# Agent Passport: shared identity & event schema
 
 **Version:** 0.1 · 2026-07-09
-**Status:** accepted (design decisions resolved 2026-07-09) — adoption in progress across the four repos
-**Scope:** TokenFuse · Engram · Idryx · Qryx (the TAIPANBOX agent-governance stack)
+**Status:** accepted (design decisions resolved 2026-07-09), adoption in progress across all seven services; see README.md's adoption-status table for current per-repo detail
+**Scope:** TokenFuse · Engram · Idryx · Qryx · Wardryx · Verdryx · Mockryx (the TAIPANBOX agent-governance stack)
 
 ---
 

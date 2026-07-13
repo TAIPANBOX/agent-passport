@@ -83,6 +83,14 @@ flowchart TB
 
 The full stack is TokenFuse (spend), Wardryx (policy), Engram (memory), Idryx (access), Qryx (crypto), Verdryx (quality), Mockryx (pre-prod), on the shared Agent Passport + agent-event contract (agent-stack-go / agent-passport), configured via terraform-provider-taipan.
 
+## Live infrastructure validation
+
+Agent Passport has no dashboard of its own - but its envelope and delegation-chain format was
+load-bearing in every live infrastructure campaign run across the stack before public launch, including
+under a 34-agent concurrent burst on a real raft-replicated gateway.
+
+Full write-up: [`VALIDATION.md`](VALIDATION.md).
+
 ---
 
 ## The `agent://` identifier

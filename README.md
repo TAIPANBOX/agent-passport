@@ -305,7 +305,7 @@ compatibility, and SPEC.md §9 for the per-repo adoption cost estimate.
 - [x] conformance criteria (SPEC.md §7) and resolved design decisions (SPEC.md §8)
 - [x] adopted across the original four (TokenFuse, Engram, Idryx, Qryx all shipped) plus wave-2 (Wardryx, Verdryx, Mockryx shipped)
 - [x] Qryx: emitting findings as agent-event (`internal/exporter`: `crypto_finding` / `crypto_drift` / `policy_violation` / `evidence_signed`, v0.1, `--events` flag)
-- [ ] a standalone conformance-check CLI/validator (today, conformance is verified per-repo against the JSON Schemas by hand)
+- [x] a standalone conformance-check CLI/validator: `agent-conform` (`TAIPANBOX/agent-stack-go`'s `cmd/agent-conform`), full JSON Schema validation of Passport documents and agent-event v0.1/v0.2 streams against embedded copies of this repo's canonical schemas
 
 ## License
 

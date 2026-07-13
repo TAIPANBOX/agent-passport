@@ -303,8 +303,8 @@ compatibility, and SPEC.md §9 for the per-repo adoption cost estimate.
 - [x] ordered, cycle-safe delegation chain, max depth 32 (SPEC.md §5, §5.1)
 - [x] event envelope schema v0.1 and v0.2, `prev_hash` hash-chain canonicalization (SPEC.md §6, `schemas/agent-event*.schema.json`)
 - [x] conformance criteria (SPEC.md §7) and resolved design decisions (SPEC.md §8)
-- [x] adopted across the original four (TokenFuse, Engram, Idryx shipped; Qryx partial) plus wave-2 (Wardryx, Verdryx, Mockryx shipped)
-- [ ] Qryx: emitting findings as agent-event (agent-infra scanning is done; the emitter is not started)
+- [x] adopted across the original four (TokenFuse, Engram, Idryx, Qryx all shipped) plus wave-2 (Wardryx, Verdryx, Mockryx shipped)
+- [x] Qryx: emitting findings as agent-event (`internal/exporter`: `crypto_finding` / `crypto_drift` / `policy_violation` / `evidence_signed`, v0.1, `--events` flag)
 - [ ] a standalone conformance-check CLI/validator (today, conformance is verified per-repo against the JSON Schemas by hand)
 
 ## License

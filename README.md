@@ -276,14 +276,14 @@ examples/events.ndjson               example events, one per source
 
 ## Adoption status
 
-_as of 2026-07-12_
+_as of 2026-07-15_
 
 | Product | Status | What shipped |
 |---|---|---|
 | Engram | shipped | MCP server accepts `agent://` IDs as an opaque `agent_id` scope; opt-in agent-event NDJSON exporter (`memory_written` · `reflection_run` · `contradiction_found` · `memory_forgotten`), shipped on main since v2.2.0, not yet in a tagged release |
 | Idryx | shipped | delegation chains (root-first, cycle-safe); generic agent-event-bus connector ingesting TokenFuse/Wardryx/Mockryx/Verdryx NDJSON, one loader deriving `source` from each envelope rather than the `--source`/`--load` flag that selected it; Passport-document ingestion (`--passports`); spend-correlation detector consuming the envelope; `attestation_missing` detector |
 | TokenFuse | shipped | `x-fuse-agent-id` carried; native agent-event exporter and `x-fuse-on-behalf-of` capture shipped on main, not yet in a tagged release |
-| Qryx | partial | agent-infra scanning shipped (`qryx agents`, `internal/agentstack`); emitting findings as agent-event not started |
+| Qryx | shipped | `agent_id`-as-evidence-subject (`qryx agents`, `internal/agentstack`); agent-event emitter (`internal/exporter`: `crypto_finding` / `crypto_drift` / `policy_violation` / `evidence_signed`, `--events` flag) |
 | Wardryx | shipped | wave-2 service; policy/approval gating, event schema v0.2 |
 | Verdryx | shipped | wave-2 service; evaluation and quality drift, event schema v0.2 |
 | Mockryx | shipped | wave-2 service; simulation and blast-radius testing, event schema v0.2 |

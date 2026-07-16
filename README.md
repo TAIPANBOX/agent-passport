@@ -309,4 +309,4 @@ compatibility, and SPEC.md §9 for the per-repo adoption cost estimate.
 
 ## License
 
-Apache License 2.0, see [`LICENSE`](./LICENSE). Copyright 2026 TAIPANBOX.
+Apache License 2.0, see [`LICENSE`](./LICENSE). Copyright 2026 IT-RAT.

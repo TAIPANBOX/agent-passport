@@ -153,6 +153,36 @@ entry is `{ "path": <folder>, "mode": "read" | "write" }`:
   declared," never "no access." Consumers MUST ignore the field if they do
   not model it.
 
+### 4.5 `models`
+
+An optional array declaring the LLM providers, models, and endpoints an agent
+is meant to use. Each entry is
+`{ "provider": <label>, "model"?: <name>, "endpoint"?: <host> }`:
+
+```json
+"models": [
+  { "provider": "anthropic", "model": "claude-sonnet-4-5", "endpoint": "api.anthropic.com" },
+  { "provider": "openai" }
+]
+```
+
+- `provider` is a required, non-empty label (e.g. `anthropic`, `openai`,
+  `bedrock`, `google`, `mistral`, `cohere`). `model` and `endpoint` are
+  optional: `model` pins a specific model, `endpoint` names the API host the
+  agent is declared to reach.
+- Like `filesystem`, this is a *declaration of intent* for audit and
+  inventory, not an enforced control. The passport format does not grant or
+  restrict model access; it records what the agent's owner says the agent is
+  meant to call, so an auditor can compare it against two independent
+  observations: what the agent's code actually imports and calls (a source
+  scan), and what it is seen reaching on the network (an egress sensor). A
+  disagreement between declared, coded, and observed model use is the finding
+  such an inventory exists to surface. This directly supports code-inventory
+  obligations such as the EU AI Act's.
+- Additive and backward-compatible: an absent `models` means "not declared,"
+  never "no model use." Consumers MUST ignore the field if they do not model
+  it.
+
 ## 5. Delegation chain
 
 Idryx already models one hop (`OnBehalfOf`). Agents spawn sub-agents, so one

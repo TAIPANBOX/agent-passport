@@ -171,6 +171,14 @@ depends on fetching it. Schema:
     "method": "spiffe-svid",
     "detail": "spiffe://acme-bank.example/agent/support/tier1-bot"
   },
+  "filesystem": [
+    { "path": "/data/reports", "mode": "read" },
+    { "path": "/data/out", "mode": "write" }
+  ],
+  "models": [
+    { "provider": "anthropic", "model": "claude-sonnet-4-5", "endpoint": "api.anthropic.com" },
+    { "provider": "openai" }
+  ],
   "labels": { "env": "prod", "cost_center": "cs-eu" },
   "created_at": "2026-07-09T00:00:00Z"
 }
@@ -186,6 +194,8 @@ depends on fetching it. Schema:
 | `parent` | no | static provisioning parent agent ID, distinct from the dynamic `on_behalf_of` chain |
 | `attestation.method` | no | one of `none` · `oidc` · `spiffe-svid` · `enclave-key` · `mtls-cert`; `none` is legal and honest, the field exists so the posture is visible |
 | `attestation.detail` | no | method-specific reference, e.g. a SPIFFE ID or issuer URL |
+| `filesystem` | no | folders the agent is declared to access, each `{ path, mode }` with `mode` one of `read` · `write`; a declaration, not an enforced control (SPEC.md §4.4) |
+| `models` | no | LLM providers, models, and endpoints the agent is declared to use, each `{ provider, model?, endpoint? }` with only `provider` required; a declaration for audit and inventory, not an enforced control (SPEC.md §4.5) |
 | `labels` | no | free-form key/value pairs, e.g. `env`, `cost_center` |
 | `created_at` | no | RFC 3339 UTC timestamp |
 

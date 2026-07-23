@@ -9,6 +9,10 @@
     "method": "spiffe-svid",
     "detail": "spiffe://acme-bank.example/agent/support/tier1-bot"
   },
+  "filesystem": [
+    { "path": "/data/reports", "mode": "read" },
+    { "path": "/data/out", "mode": "write" }
+  ],
   "labels": { "env": "prod", "cost_center": "cs-eu" },
   "created_at": "2026-07-09T00:00:00Z"
 }

@@ -124,6 +124,35 @@ Records how the org binds the name to a workload. `none` is legal and
 honest (most orgs today); the field exists so the posture is *visible* —
 Idryx SHOULD surface `attestation: none` on privileged agents as a finding.
 
+### 4.4 `filesystem`
+
+An optional array declaring the folders an agent is meant to access. Each
+entry is `{ "path": <folder>, "mode": "read" | "write" }`:
+
+```json
+"filesystem": [
+  { "path": "/data/reports", "mode": "read" },
+  { "path": "/data/out", "mode": "write" }
+]
+```
+
+- `path` is a non-empty folder path; `mode` is exactly `read` or `write`.
+- A given `path` SHOULD appear at most once: two entries for one folder are
+  ambiguous (which mode wins?), and a producer SHOULD refuse to emit a
+  duplicate rather than silently pick one.
+- This is a *declaration of intent*, carried on the passport, not an
+  enforced control. The passport format does not grant, mount, or restrict
+  filesystem access; it records what the agent's owner says the agent
+  should reach, so an auditor can compare declared scope against observed
+  behavior. Whether anything enforces it is a product decision outside this
+  spec: as of today no product in the stack enforces filesystem paths (for
+  example Wardryx's policy surface is tools, domains, spend ceilings, step
+  count, and attestation, with no path rule), so a consumer MUST NOT read
+  this field as a live access-control boundary.
+- Additive and backward-compatible: an absent `filesystem` means "not
+  declared," never "no access." Consumers MUST ignore the field if they do
+  not model it.
+
 ## 5. Delegation chain
 
 Idryx already models one hop (`OnBehalfOf`). Agents spawn sub-agents, so one

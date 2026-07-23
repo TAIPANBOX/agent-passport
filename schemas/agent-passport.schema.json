@@ -52,6 +52,27 @@
       },
       "additionalProperties": true
     },
+    "filesystem": {
+      "type": "array",
+      "description": "Folders this agent is declared to access, each with a read or write mode. A declaration, not an enforced control. See SPEC.md §4.4.",
+      "items": {
+        "type": "object",
+        "required": ["path", "mode"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Folder path the agent is declared to access."
+          },
+          "mode": {
+            "type": "string",
+            "enum": ["read", "write"],
+            "description": "Access mode for this folder."
+          }
+        },
+        "additionalProperties": true
+      }
+    },
     "labels": {
       "type": "object",
       "description": "Free-form key/value labels (e.g. env, cost_center).",

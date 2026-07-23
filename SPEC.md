@@ -99,7 +99,7 @@ token.
     "method": "spiffe-svid",
     "detail": "spiffe://acme-bank.example/agent/support/tier1-bot"
   },
-  "labels": { "env": "prod", "cost_center": "cs-eu" },
+  "labels": { "env": "prod", "cost_center": "cs-eu", "version": "1.4.2" },
   "created_at": "2026-07-09T00:00:00Z"
 }
 ```
@@ -182,6 +182,31 @@ is meant to use. Each entry is
 - Additive and backward-compatible: an absent `models` means "not declared,"
   never "no model use." Consumers MUST ignore the field if they do not model
   it.
+
+### 4.6 `labels.version` (reserved label convention)
+
+Fleet inventory and drift views need one agreed place to read "which
+version of this agent is running" across products; an unreserved, ad-hoc
+label cannot be relied on cross-product. This subsection reserves one key
+inside the existing free-form `labels` map for that purpose.
+
+```json
+"labels": { "env": "prod", "cost_center": "cs-eu", "version": "1.4.2" }
+```
+
+- `labels.version` is the agent's own release version, named by its
+  operator: the version of the agent's code or configuration, not the
+  Passport schema version (`schema`) and not the model version recorded
+  under `models` (§4.5).
+- Optional: producers SHOULD set it when the agent has a meaningful
+  release identity, and SHOULD use the agent's own semver when one
+  exists; the value itself stays free-form.
+- Consumers (inventory, drift/360 cards, dashboards) MUST treat a value
+  that does not parse as semver as an opaque string - display it, group
+  by it, compare it for equality, and nothing more.
+- This is a *label convention*, not a schema change: `labels` remains
+  exactly the free-form string map it always was, and a passport without
+  `labels.version` is exactly as valid as one with it.
 
 ## 5. Delegation chain
 

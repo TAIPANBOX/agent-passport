@@ -99,7 +99,7 @@
     },
     "labels": {
       "type": "object",
-      "description": "Free-form key/value labels (e.g. env, cost_center).",
+      "description": "Free-form key/value labels (e.g. env, cost_center). The \"version\" key is reserved by convention for the agent's own release version, not the passport schema version. See SPEC.md §4.6.",
       "additionalProperties": {
         "type": "string"
       }

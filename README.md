@@ -150,7 +150,7 @@ principal, and maximum chain depth is 32 entries (SPEC.md §5.1).
 ## The Passport document and the event envelope
 
 <div align="center">
-<img src="docs/envelope.png" alt="Colored field cards for the agent-event envelope (required: schema, ts, source, type, agent_id; optional: severity, run_id, on_behalf_of, data, prev_hash) and the Agent Passport document (required: schema, id, owner; optional: display_name, runtime, parent, attestation, labels, created_at)" width="900">
+<img src="docs/envelope.png" alt="Colored field cards for the agent-event envelope (required: schema, ts, source, type, agent_id; optional: severity, run_id, on_behalf_of, data, prev_hash) and the Agent Passport document (required: schema, id, owner; optional: display_name, runtime, parent, attestation, filesystem, models, labels, created_at)" width="900">
 </div>
 
 ### Passport document

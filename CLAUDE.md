@@ -56,6 +56,7 @@ changes what an implementer would build, it is a spec change.
 ```sh
 pip install "jsonschema>=4.18"
 python .github/scripts/validate_examples.py
+./scripts/schema-matches-spec.sh
 ```
 
 This is what CI runs. It validates every example against the schemas, which is
@@ -74,7 +75,8 @@ an absent invariant.
 2. **`schemas/` is the machine form of `SPEC.md` and must not drift from it.**
    A field added to the prose without the schema, or to the schema without the
    prose, means implementers using one of them build the wrong thing.
-   *(not enforced)*
+   *(partly gated: `scripts/schema-matches-spec.sh` catches schema ahead of
+   prose, which is half the surface. See below for why only half.)*
 3. **Every example validates against its schema.**
    *(gate: `.github/scripts/validate_examples.py`)*
 
@@ -103,13 +105,22 @@ an absent invariant.
 
 This list is debt, and it is here to stay visible rather than to be tidy.
 
-**Held by this file alone: invariants 1, 2, 5 and 6.**
+**Held by this file alone: invariants 1, 5 and 6.**
 
-Invariant 2 is the one worth automating and the one most likely to break
-quietly. A script that walks every property name in `schemas/*.json` and fails
-if it does not appear anywhere in `SPEC.md` would catch a schema edit that
-skipped the prose. It would not catch the reverse, prose without schema, but it
-would halve the surface, and it is perhaps twenty lines.
+Invariant 2 is now half held by `scripts/schema-matches-spec.sh`, which walks
+every property declared anywhere in `schemas/*.json`, including nested ones and
+those under `$defs`, and fails when a name appears in no part of `SPEC.md`. It
+runs in CI. Thirty-eight declarations across three schemas pass today.
+
+**The half it does not cover is deliberate, not an oversight.** Prose ahead of
+schema, a field described in `SPEC.md` that no schema declares, passes this
+cleanly. Catching that needs a reader: the prose names things it does not
+define, quotes examples, and discusses fields belonging to other documents, so
+a script would cry wolf and get disabled. Half the surface, honestly labelled,
+beats a guess at the other half.
+
+It also says nothing about whether the prose describing a field is correct. A
+name present in both places can still be documented wrongly.
 
 Invariant 5 is checkable in a narrower form: assert that no field which is
 optional in the v0.1 schema is required in v0.2.

@@ -297,7 +297,10 @@ examples/events.ndjson               example events, one per source
 ## Adoption status
 
 _as of 2026-08-01. Every row re-checked against the named artifacts in each
-repository's source, not against its README: `engram/events.py`,
+repository's source, not against its README, AND read in full: the first pass
+verified that the artifacts exist and missed a second copy of the same stale
+sentence in the Engram row, because the terminal output was truncated before
+it. Checked: `engram/events.py`,
 `Idryx/internal/ingest/{tokenfuse,passport}`,
 `tokenfuse/crates/gateway/src/proxy.rs`, `Qryx/internal/{agentstack,exporter}`,
 and for the three wave-2 services the `agent-stack-go/event` package, whose
@@ -306,7 +309,7 @@ from this repo._
 
 | Product | Status | What shipped |
 |---|---|---|
-| Engram | shipped | MCP server accepts `agent://` IDs as an opaque `agent_id` scope; opt-in agent-event NDJSON exporter (`memory_written` · `reflection_run` · `contradiction_found` · `memory_forgotten`), shipped on main since v2.2.0, not yet in a tagged release |
+| Engram | shipped | MCP server accepts `agent://` IDs as an opaque `agent_id` scope; opt-in agent-event NDJSON exporter (`memory_written` · `reflection_run` · `contradiction_found` · `memory_forgotten`), in `v2.2.1` and every release since |
 | Idryx | shipped | delegation chains (root-first, cycle-safe); generic agent-event-bus connector ingesting TokenFuse/Wardryx/Mockryx/Verdryx NDJSON, one loader deriving `source` from each envelope rather than the `--source`/`--load` flag that selected it; Passport-document ingestion (`--passports`); spend-correlation detector consuming the envelope; `attestation_missing` detector |
 | TokenFuse | shipped | `x-fuse-agent-id` carried; native agent-event exporter and `x-fuse-on-behalf-of` capture, both in `v0.4.0` |
 | Qryx | shipped | `agent_id`-as-evidence-subject (`qryx agents`, `internal/agentstack`); agent-event emitter (`internal/exporter`: `crypto_finding` / `crypto_drift` / `policy_violation` / `evidence_signed`, `--events` flag) |

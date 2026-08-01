@@ -25,3 +25,5 @@ jobs:
         run: python .github/scripts/validate_examples.py
       - name: schemas match SPEC.md
         run: ./scripts/schema-matches-spec.sh
+      - name: v0.2 widens v0.1
+        run: ./scripts/version-compatibility.sh

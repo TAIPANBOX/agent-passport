@@ -57,6 +57,7 @@ changes what an implementer would build, it is a spec change.
 pip install "jsonschema>=4.18"
 python .github/scripts/validate_examples.py
 ./scripts/schema-matches-spec.sh
+./scripts/version-compatibility.sh
 ```
 
 This is what CI runs. It validates every example against the schemas, which is
@@ -93,10 +94,11 @@ an absent invariant.
    input. Retiring v0.1 is a breaking change for every consumer that has not
    migrated, and needs the user. *(partly gated: the validator covers whichever
    versions the examples exercise, not the promise to keep them)*
-5. **An optional field never quietly becomes required.** Optionality is a
-   compatibility promise under 6.4: a stream written by an older implementation
-   must keep validating. Tightening a constraint is a version bump.
-   *(not enforced)*
+5. **An optional field never quietly becomes required**, and more generally
+   v0.2 is a WIDENING of v0.1. Optionality is a compatibility promise under 6.4:
+   a stream written by an older implementation must keep validating. Tightening
+   a constraint is a version bump.
+   *(gate: `scripts/version-compatibility.sh`)*
 6. **Reserved conventions stay reserved.** `labels.version` (4.6) is reserved
    precisely so nobody redefines it locally. Adding a new reserved convention
    is a spec decision. *(not enforced)*
@@ -105,7 +107,7 @@ an absent invariant.
 
 This list is debt, and it is here to stay visible rather than to be tidy.
 
-**Held by this file alone: invariants 1, 5 and 6.**
+**Held by this file alone: invariants 1 and 6.**
 
 Invariant 2 is now half held by `scripts/schema-matches-spec.sh`, which walks
 every property declared anywhere in `schemas/*.json`, including nested ones and
@@ -122,8 +124,25 @@ beats a guess at the other half.
 It also says nothing about whether the prose describing a field is correct. A
 name present in both places can still be documented wrongly.
 
-Invariant 5 is checkable in a narrower form: assert that no field which is
-optional in the v0.1 schema is required in v0.2.
+Invariant 5 is now `scripts/version-compatibility.sh`, and it is broader than
+the narrow form this paragraph asked for.
+
+The obvious behavioural check does not work and it is worth knowing why:
+`schema` is a `const` in each file, so a v0.1 event does not validate against
+the v0.2 schema and never will. That is design, not drift. So the check swaps
+ONLY the version string and then requires the event to pass, which is the actual
+promise in 6.4: everything else about a v0.1 event stays acceptable.
+
+The structural half compares the two schemas and refuses anything that narrows.
+Where v0.1 constrains a field to an enum, compatibility is DECIDABLE and the
+check decides it: every value v0.1 accepted is validated against v0.2's schema
+for that field.
+
+**That last part exists because a heuristic got it wrong on the only field that
+actually changed.** Comparing bounds in isolation reported `source` as
+"tightened minLength from unset to 1", when v0.1's four enum values are all
+non-empty and every one still passes. A bound is not a narrowing if the old
+schema was narrower by another means.
 
 **Separately, the `additionalProperties` question is open and is a real hole.**
 Today a misspelled field name validates clean (see invariant 3). Setting

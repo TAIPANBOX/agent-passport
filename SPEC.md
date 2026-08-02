@@ -297,7 +297,7 @@ self-protection, not third-party or adversarial traffic.
 
 | `source` | `type` values |
 |---|---|
-| `tokenfuse` | `budget_exhausted` · `sustained_loop` · `spend_spike` · `fanout_explosion` · `breaker_tripped` · `dlp_block` · `taint_block` · `mcp_drift` |
+| `tokenfuse` | `budget_exhausted` · `sustained_loop` · `spend_spike` · `fanout_explosion` · `breaker_tripped` · `dlp_block` · `taint_block` · `mcp_drift` · `identity_mismatch` (high) · `tool_call` (low) · `budget_threshold` (medium) · `run_killed` (high) |
 | `engram` | `memory_written` · `reflection_run` · `contradiction_found` · `memory_forgotten` |
 | `idryx` | `excessive_privilege` · `behavior_anomaly` · `impossible_travel` · `mfa_fatigue` · `new_device` · `blast_radius_change` · `attestation_missing` |
 | `qryx` | `crypto_finding` · `crypto_drift` · `policy_violation` · `evidence_signed` |
@@ -311,6 +311,17 @@ semantic changes require a schema version bump. The `wardryx`, `verdryx`,
 and `mockryx` rows are wave-2 additions introduced alongside schema v0.2
 (§6.4); the parenthesized value after each type is its typical `severity`,
 not a schema-enforced mapping.
+
+The last four TokenFuse types were added after this registry was first
+written, under the "added freely within a `source`" rule above, and are listed
+here so that a reader of this document sees what that producer actually emits:
+`identity_mismatch` (its identity gate), `tool_call` (its MCP broker's
+per-action audit signal), `budget_threshold` (a run crossing the configured
+fraction of its budget, which is the warning that precedes
+`budget_exhausted`), and `run_killed`. Their parenthesized severities are
+exact rather than typical: TokenFuse fixes the severity per type in code, so
+no emission site can choose one, and `budget_threshold` sits deliberately one
+band below the incident it warns about.
 
 ### 6.3 The one concrete integration this buys
 

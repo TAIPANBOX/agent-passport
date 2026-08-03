@@ -314,7 +314,7 @@ self-protection, not third-party or adversarial traffic.
 | `engram` | `memory_written` · `reflection_run` · `contradiction_found` · `memory_forgotten` |
 | `idryx` | RESERVED, not emitted today: `excessive_privilege` · `behavior_anomaly` · `impossible_travel` · `mfa_fatigue` · `new_device` · `blast_radius_change` · `attestation_missing` |
 | `qryx` | `crypto_finding` · `crypto_drift` · `policy_violation` · `evidence_signed` |
-| `wardryx` | `policy_allow` (info) · `policy_deny` (high) · `approval_requested` (medium) · `approval_granted` (info) · `approval_denied` (high) · `approval_timeout` (high) |
+| `wardryx` | `policy_allow` (info) · `policy_deny` (high) · `approval_requested` (medium) · `approval_granted` (info) · `approval_denied` (high) · `approval_timeout` (high) · `approval_unanswered` (high) |
 | `verdryx` | `eval_run` (info) · `quality_score` (info) · `quality_drift` (high) |
 | `mockryx` | `sim_run` (info) · `sim_finding` (high) · `blast_radius_measured` (medium) |
 
@@ -337,6 +337,15 @@ aspirational:
 The lesson the table now carries: a registry that lists what a product MEANS to
 emit, beside what it does emit, is a registry nobody can act on. If a name is
 reserved, say so on the row.
+
+
+`approval_timeout` and `approval_unanswered` are two different facts and the
+names are worth reading carefully. The first fires when an agent REDEEMS an
+approval whose window has closed, which usually means a human did decide and
+the agent came back late. The second fires when a hold has simply sat
+undecided: nothing decayed, nobody answered. Until 2026-08-03 only the first
+existed, so an agent blocked on an unwatched queue produced no event at all,
+and the name that sounded like it covered that case did not.
 
 `policy_deny` appears under two sources on purpose. The same fact, an action
 refused by policy, is decided in two places: at the policy plane by wardryx,

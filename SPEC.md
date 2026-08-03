@@ -264,6 +264,19 @@ about an agent fits this envelope:
 ### 6.1 Field rules
 
 - `schema`, `ts` (RFC 3339, UTC), `source`, `type`, `agent_id` — required.
+
+  `agent_id` being required is a boundary, not a formality, and it is worth
+  knowing before it surprises somebody. An observation about a whole
+  organisation, a tenant or a fleet has no subject here and therefore cannot
+  travel in this stream at all. A producer that has one MUST skip the event
+  rather than fabricate a subject to make it fit: a fallback id, a "various"
+  agent, or the org's own id in this field each makes every downstream count
+  wrong and puts a name on an alert that did not do the thing.
+
+  Such facts belong in the producing product's own API and console until this
+  envelope grows a subject kind, which would be a change every consumer has to
+  make together. TokenFuse's `spend_spike` is the live example: raised,
+  displayed, and deliberately never exported.
 - `source`: as of schema v0.2, an open string (`type: string, minLength: 1`),
   not a closed enum. Adding a source is additive and does not require a
   schema bump. Consumers MUST ignore events from a `source` they do not

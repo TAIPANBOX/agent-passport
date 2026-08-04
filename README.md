@@ -256,15 +256,27 @@ of the event object with the `prev_hash` field itself removed
 
 Registered sources today:
 
-| `source` | Product | Representative `type` values |
+| `source` | Product | `type` values |
 |---|---|---|
-| `tokenfuse` | spend governance | `budget_exhausted` · `sustained_loop` · `spend_spike` · `fanout_explosion` · `breaker_tripped` · `dlp_block` · `taint_block` · `mcp_drift` |
+| `tokenfuse` | spend governance | `budget_exhausted` · `sustained_loop` · `spend_spike` · `fanout_explosion` · `breaker_tripped` (medium) · `dlp_block` · `taint_block` · `mcp_drift` · `identity_mismatch` (high) · `tool_call` (low) · `budget_threshold` (medium) · `run_killed` (high) · `unit_cap_exceeded` (high) · `policy_deny` (high) |
 | `engram` | memory governance | `memory_written` · `reflection_run` · `contradiction_found` · `memory_forgotten` |
-| `idryx` | identity and access governance | `excessive_privilege` · `behavior_anomaly` · `impossible_travel` · `mfa_fatigue` · `new_device` · `blast_radius_change` · `attestation_missing` |
+| `idryx` | identity and access governance | **RESERVED, not emitted today:** `excessive_privilege` · `behavior_anomaly` · `impossible_travel` · `mfa_fatigue` · `new_device` · `blast_radius_change` · `attestation_missing` |
 | `qryx` | cryptographic evidence | `crypto_finding` · `crypto_drift` · `policy_violation` · `evidence_signed` |
-| `wardryx` | policy and approval gating (wave 2) | `policy_allow` (info) · `policy_deny` (high) · `approval_requested` (medium) · `approval_granted` (info) · `approval_denied` (high) · `approval_timeout` (high) |
+| `wardryx` | policy and approval gating (wave 2) | `policy_allow` (info) · `policy_deny` (high) · `approval_requested` (medium) · `approval_granted` (info) · `approval_denied` (high) · `approval_timeout` (high) · `approval_unanswered` (high) |
 | `verdryx` | evaluation and quality drift (wave 2) | `eval_run` (info) · `quality_score` (info) · `quality_drift` (high) |
 | `mockryx` | simulation and blast-radius testing (wave 2) | `sim_run` (info) · `sim_finding` (high) · `blast_radius_measured` (medium) |
+
+A row is a claim that the source writes those types into this envelope **today**,
+not a list of what it detects or means to. Idryx is the one row that is not:
+its detections leave by OTLP and by Slack, so all seven of its names are
+reserved rather than live, and a consumer writing a handler for one of them
+would wait forever. SPEC.md §6.2 is the normative copy of this table, audited
+against every producer's code on 2026-08-03, and carries the reasoning.
+
+`approval_timeout` and `approval_unanswered` are two different facts. The first
+fires when an agent redeems an approval whose window has closed, which usually
+means a human did decide and the agent came back late. The second fires when a
+hold has simply sat undecided: nothing decayed, nobody answered.
 
 The first four TokenFuse types are its existing incident taxonomy
 verbatim, zero renaming. Consumers MUST accept events whose `schema` is

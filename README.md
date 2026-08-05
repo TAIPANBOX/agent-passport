@@ -10,7 +10,7 @@
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)
 ![Status](https://img.shields.io/badge/status-accepted-success.svg)
 
-<img src="docs/architecture.png" alt="agent-passport architecture: seven TAIPANBOX services (TokenFuse, Wardryx, Engram, Idryx, Qryx, Verdryx, Mockryx) produce and consume the agent-event bus, which the agent-passport spec governs and which yields three artifacts: the agent:// identifier, the Agent Passport document, and the agent-event envelope" width="960">
+<img src="docs/architecture.png" alt="agent-passport architecture: eight TAIPANBOX services (TokenFuse, Wardryx, Engram, Idryx, Qryx, Verdryx, Mockryx, Heraldyx) produce and consume the agent-event bus, which the agent-passport spec governs and which yields three artifacts: the agent:// identifier, the Agent Passport document, and the agent-event envelope" width="960">
 
 </div>
 

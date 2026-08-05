@@ -47,7 +47,7 @@ the resolved design decisions (§8).
 
 <div align="center">
 
-<img src="assets/diagram.svg" alt="Platform contract: seven emitters feed one agent-event bus, the envelope card lists its ten fields, four consumers read the stream, and Terraform manages budgets, passports and policies as code" width="960">
+<img src="assets/diagram.svg" alt="Platform contract: six emitters feed one agent-event bus, the envelope card lists its ten fields, four consumers read the stream, and Terraform manages budgets, passports and policies as code" width="960">
 
 <sub>The same service as its room on <a href="https://it-rat.com/services/platform.html">it-rat.com</a> draws it, where the diagram sits next to a simulation you can scrub back and forth.</sub>
 

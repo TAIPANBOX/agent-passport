@@ -313,7 +313,7 @@ schemas/agent-passport.schema.json   JSON Schema (draft 2020-12) for §4
 schemas/agent-event.schema.json      JSON Schema (draft 2020-12) for §6, v0.1
 schemas/agent-event.v0.2.schema.json JSON Schema (draft 2020-12) for §6, v0.2
 examples/passport.json               example Passport document
-examples/events.ndjson               example events, one per source
+examples/events.ndjson               example events, one per emitting source
 ```
 
 ---

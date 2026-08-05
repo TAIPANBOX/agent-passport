@@ -10,7 +10,7 @@
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)
 ![Status](https://img.shields.io/badge/status-accepted-success.svg)
 
-<img src="docs/architecture.png" alt="agent-passport architecture: eight TAIPANBOX services (TokenFuse, Wardryx, Engram, Idryx, Qryx, Verdryx, Mockryx, Heraldyx) produce and consume the agent-event bus, which the agent-passport spec governs and which yields three artifacts: the agent:// identifier, the Agent Passport document, and the agent-event envelope" width="960">
+<img src="docs/architecture.png" alt="agent-passport architecture: eight TAIPANBOX services (TokenFuse, Wardryx, Engram, Idryx, Qryx, Verdryx, Mockryx, Heraldyx), six of which emit into the agent-event bus while Idryx and Heraldyx only read it, all governed by the agent-passport spec, which yields three artifacts: the agent:// identifier, the Agent Passport document, and the agent-event envelope" width="960">
 
 </div>
 
@@ -47,7 +47,7 @@ the resolved design decisions (§8).
 
 <div align="center">
 
-<img src="assets/diagram.svg" alt="Platform contract: seven emitters feed one agent-event bus, the envelope card lists its ten fields, four consumers read the stream, and Terraform manages budgets, passports and policies as code" width="960">
+<img src="assets/diagram.svg" alt="Platform contract: six emitters feed one agent-event bus, the envelope card lists its ten fields, four consumers read the stream, and Terraform manages budgets, passports and policies as code" width="960">
 
 <sub>The same service as its room on <a href="https://it-rat.com/services/platform.html">it-rat.com</a> draws it, where the diagram sits next to a simulation you can scrub back and forth.</sub>
 
@@ -313,7 +313,7 @@ schemas/agent-passport.schema.json   JSON Schema (draft 2020-12) for §4
 schemas/agent-event.schema.json      JSON Schema (draft 2020-12) for §6, v0.1
 schemas/agent-event.v0.2.schema.json JSON Schema (draft 2020-12) for §6, v0.2
 examples/passport.json               example Passport document
-examples/events.ndjson               example events, one per source
+examples/events.ndjson               example events, one per emitting source
 ```
 
 ---

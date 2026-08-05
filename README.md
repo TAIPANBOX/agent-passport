@@ -10,7 +10,7 @@
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)
 ![Status](https://img.shields.io/badge/status-accepted-success.svg)
 
-<img src="docs/architecture.png" alt="agent-passport architecture: seven TAIPANBOX services (TokenFuse, Wardryx, Engram, Idryx, Qryx, Verdryx, Mockryx) produce and consume the agent-event bus, which the agent-passport spec governs and which yields three artifacts: the agent:// identifier, the Agent Passport document, and the agent-event envelope" width="960">
+<img src="docs/architecture.png" alt="agent-passport architecture: eight TAIPANBOX services (TokenFuse, Wardryx, Engram, Idryx, Qryx, Verdryx, Mockryx, Heraldyx) produce and consume the agent-event bus, which the agent-passport spec governs and which yields three artifacts: the agent:// identifier, the Agent Passport document, and the agent-event envelope" width="960">
 
 </div>
 
@@ -47,7 +47,7 @@ the resolved design decisions (§8).
 
 <div align="center">
 
-<img src="assets/diagram.svg" alt="Platform contract: seven emitters feed one agent-event bus, the envelope card lists its ten fields, three consumers read the stream, and Terraform manages budgets, passports and policies as code" width="960">
+<img src="assets/diagram.svg" alt="Platform contract: seven emitters feed one agent-event bus, the envelope card lists its ten fields, four consumers read the stream, and Terraform manages budgets, passports and policies as code" width="960">
 
 <sub>The same service as its room on <a href="https://it-rat.com/services/platform.html">it-rat.com</a> draws it, where the diagram sits next to a simulation you can scrub back and forth.</sub>
 
@@ -101,7 +101,7 @@ flowchart TB
 - **Produces**: the `agent://` / `user://` identifier grammar, the Agent Passport document schema, and the agent-event envelope schema (`taipanbox.dev/agent-event/v0.2`).
 - **Talks to**: governs every service in the stack; **agent-stack-go** is its Go binding, and Rust (**TokenFuse**) and Python (**Engram**, **Verdryx**) carry their own bindings validated against the same schema.
 
-The full stack is TokenFuse (spend), Wardryx (policy), Engram (memory), Idryx (access), Qryx (crypto), Verdryx (quality), Mockryx (pre-prod), on the shared Agent Passport + agent-event contract (agent-stack-go / agent-passport), configured via terraform-provider-taipan.
+The full stack is TokenFuse (spend), Wardryx (policy), Engram (memory), Idryx (access), Qryx (crypto), Verdryx (quality), Mockryx (pre-prod) and heraldyx (the mail out), on the shared Agent Passport + agent-event contract (agent-stack-go / agent-passport), configured via terraform-provider-taipan and driven from Genaryx, the console over all of it. Trailryx, the record plane, is built and not wired into this yet.
 
 Run the whole open stack locally with one command via [**stack-up**](https://github.com/TAIPANBOX/stack-up); the stack's home on the web is [**it-rat.com**](https://it-rat.com).
 

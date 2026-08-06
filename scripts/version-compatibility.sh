@@ -103,8 +103,22 @@ for name in sorted(set(old_props) & set(new_props)):
     for k in NARROWING:
         if k in n and n[k] > o.get(k, 0):
             problems.append(f"'{name}' tightened {k} from {o.get(k, 'unset')} to {n[k]}")
+    # An upper bound that v0.2 has and v0.1 does not is a narrowing as surely
+    # as a lowered one: v0.1 accepted everything above it. The lower-bound loop
+    # above already reads an absent bound as 0 and so catches its own version
+    # of this; this loop used to require the key in BOTH schemas, which meant a
+    # max* bound introduced by v0.2 alone passed as though nothing changed.
+    # Found by adding maxItems to on_behalf_of and watching the check approve
+    # the one-sided version of that edit.
     for k in WIDENING:
-        if k in n and k in o and n[k] < o[k]:
+        if k not in n:
+            continue
+        if k not in o:
+            problems.append(
+                f"'{name}' has {k} {n[k]} in v0.2 and no {k} at all in v0.1, so "
+                f"v0.2 rejects values v0.1 accepted"
+            )
+        elif n[k] < o[k]:
             problems.append(f"'{name}' tightened {k} from {o[k]} to {n[k]}")
     if "pattern" in n and n.get("pattern") != o.get("pattern"):
         problems.append(

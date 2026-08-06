@@ -72,6 +72,7 @@ flowchart TB
   ENG ==> BUS
   BUS ==> IDX["Idryx: identity graph, detectors, Agent-BOM"]
   BUS ==> QX["Qryx: crypto / PQC, passport + hash-chain scan"]
+  QX ==>|"crypto events"| BUS
   BUS ==> VX["Verdryx: quality / drift"]
   VX ==>|"quality events"| BUS
   TF -->|"outcome-tagged traces"| VX
@@ -82,6 +83,7 @@ flowchart TB
   YOU(["you, in a browser over your own tunnel"]) --> GX[["Genaryx: the console over all of it"]]
   GX -->|"signed commands: the kill, an approval, a policy"| CL
   GX -->|"signed commands"| WX
+  GX ==>|"console_command"| BUS
   GX -.->|"reads it"| IDX
   GX -.->|"reads it"| QX
   GX -.->|"reads it"| VX
@@ -273,6 +275,14 @@ Registered sources today:
 | `wardryx` | policy and approval gating (wave 2) | `policy_allow` (info) · `policy_deny` (high) · `approval_requested` (medium) · `approval_granted` (info) · `approval_denied` (high) · `approval_timeout` (high) · `approval_unanswered` (high) |
 | `verdryx` | evaluation and quality drift (wave 2) | `eval_run` (info) · `quality_score` (info) · `quality_drift` (high) |
 | `mockryx` | simulation and blast-radius testing (wave 2) | `sim_run` (info) · `sim_finding` (high) · `blast_radius_measured` (medium) |
+| `console` | the operator console's own privileged actions (Genaryx) | `console_command` |
+
+The `console` row is Genaryx, the operator's own console: one `console_command`
+per privileged mutation it makes (kill a run, change a budget, decide an
+approval, acknowledge an incident, build an evidence pack, approve a copilot
+proposal, issue or revoke an operator WireGuard peer), which action it was in
+`data.action`, the signed outcome in the rest of `data`, and no `severity` at
+all. SPEC.md §6.2 carries the detail.
 
 A row is a claim that the source writes those types into this envelope **today**,
 not a list of what it detects or means to. Idryx is the one row that is not:

@@ -27,3 +27,5 @@ jobs:
         run: ./scripts/schema-matches-spec.sh
       - name: v0.2 widens v0.1
         run: ./scripts/version-compatibility.sh
+      - name: artifacts match the SPEC 6.2 registry
+        run: ./scripts/artifacts-match-registry.sh

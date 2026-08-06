@@ -37,6 +37,17 @@ and a common shape for the events each product emits about it.
   not prove possession. Attestation (§4.3) records *how* the binding was
   established, by reference to existing mechanisms (OIDC, SPIFFE SVID,
   Secure Enclave signature) — it does not define a new one.
+- **Not a freshness claim.** The delegation chain (§5) records who acted on
+  behalf of whom, not when. It carries no expiry, no TTL and no issued-at
+  time, and nothing here lets a consumer tell a chain asserted a second ago
+  from one lifted off a request captured a year earlier and replayed: the
+  event's `ts` (§6.1) times the event, not the delegation it reports. A
+  consumer MUST NOT read a chain as evidence that the delegation is still in
+  force; a control that needs that must get it from whatever mechanism
+  established the delegation. This is a decision rather than an omission. A
+  validity window would make every consumer a clock-dependent verifier, and
+  this spec issues nothing token-shaped anywhere (§4: the Passport is
+  metadata, not a token).
 - **Not orchestration.** Nothing here schedules, routes, or runs agents.
 - **Not a wire protocol.** Events are plain NDJSON objects; how they move
   (file, webhook, OTLP log body, Parquet column) is each product's business.
@@ -301,6 +312,7 @@ Registered sources today:
 | `wardryx` | policy and approval gating (wave 2) |
 | `verdryx` | evaluation and quality drift (wave 2) |
 | `mockryx` | simulation and blast-radius testing (wave 2) |
+| `console` | the operator console's own privileged actions (Genaryx) |
 
 wardryx, verdryx, and mockryx are wave-2 services; like the original four,
 this contract governs an operator's own agents, for the operator's own
@@ -317,6 +329,7 @@ self-protection, not third-party or adversarial traffic.
 | `wardryx` | `policy_allow` (info) · `policy_deny` (high) · `approval_requested` (medium) · `approval_granted` (info) · `approval_denied` (high) · `approval_timeout` (high) · `approval_unanswered` (high) |
 | `verdryx` | `eval_run` (info) · `quality_score` (info) · `quality_drift` (high) |
 | `mockryx` | `sim_run` (info) · `sim_finding` (high) · `blast_radius_measured` (medium) |
+| `console` | `console_command` |
 
 
 A row here is a CLAIM that the source writes those types into this envelope
@@ -337,6 +350,25 @@ aspirational:
 The lesson the table now carries: a registry that lists what a product MEANS to
 emit, beside what it does emit, is a registry nobody can act on. If a name is
 reserved, say so on the row.
+
+The `console` row is Genaryx, the operator's own console, and it is here
+because the console acts on the stack rather than only watching it. Read from
+`crates/core/src/command.rs` and its callers rather than from its docs: one
+`console_command` is appended per privileged mutation, to the same NDJSON file
+the products write, joining the §6.5 hash chain instead of sitting unlinked
+beside it. Fixed shape, schema v0.2: `agent_id`
+`agent://<trust-domain>/console/<host>`, `on_behalf_of` carrying the
+operator's principal when it matches the `(agent|user)://` form, and `data`
+holding exactly `action`, `target`, `decision`, `sig_alg`, `sig_fpr`,
+`http_status` and `verify_result`. Which action it was lives in `data.action`
+(`console.kill_run`, `console.set_budget`, `console.ack_incident`,
+`console.grant_approval`, `console.deny_approval`, `console.evidence_built`,
+`console.copilot_proposal_approved`, `console.issue_wg_peer`,
+`console.revoke_wg_peer`), never in `type`, so the envelope has one shape
+whatever the operator did. It sets no `severity`, which is why its row carries
+none. Until this row existed the console was emitting an undeclared extension
+onto a shared bus: nothing failed conformance, because v0.2's `source` and
+`type` are open strings, and no consumer had been told the event exists.
 
 
 `approval_timeout` and `approval_unanswered` are two different facts and the
@@ -390,11 +422,18 @@ re-versioned by this change.
 
 Consumers MUST accept events whose `schema` is either
 `taipanbox.dev/agent-event/v0.1` or `taipanbox.dev/agent-event/v0.2`.
-Existing emitters (tokenfuse, engram, idryx, qryx) may keep emitting v0.1
-events; those remain valid, and nothing requires them to move. New wave-2
-services (wardryx, verdryx, mockryx) emit v0.2. The two versions differ
-only in the `source` field (closed enum in v0.1, open string in v0.2,
-§6.1); every other field is unchanged.
+Emitters already on v0.1 may keep emitting v0.1 events; those remain valid,
+and nothing requires them to move. New wave-2 services (wardryx, verdryx,
+mockryx) emit v0.2. The two versions differ only in the `source` field
+(closed enum in v0.1, open string in v0.2, §6.1); every other field is
+unchanged.
+
+That v0.1 enum is a closed list of four names, `tokenfuse`, `engram`,
+`idryx` and `qryx`, and a list of permitted values is not a list of
+emitters: `idryx` is in the enum and emits nothing into this envelope
+(§6.2). This paragraph named all four as emitters until 2026-08-06, three
+days after the audit that corrected 6.2, because that audit read the
+registry and never came back here.
 
 ### 6.5 `prev_hash` canonicalization
 

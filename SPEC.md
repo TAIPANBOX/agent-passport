@@ -313,6 +313,7 @@ Registered sources today:
 | `verdryx` | evaluation and quality drift (wave 2) |
 | `mockryx` | simulation and blast-radius testing (wave 2) |
 | `console` | the operator console's own privileged actions (Genaryx) |
+| `heraldyx` | operator notification (mail out) |
 
 wardryx, verdryx, and mockryx are wave-2 services; like the original four,
 this contract governs an operator's own agents, for the operator's own
@@ -326,10 +327,11 @@ self-protection, not third-party or adversarial traffic.
 | `engram` | `memory_written` · `reflection_run` · `contradiction_found` · `memory_forgotten` |
 | `idryx` | RESERVED, not emitted today: `excessive_privilege` · `behavior_anomaly` · `impossible_travel` · `mfa_fatigue` · `new_device` · `blast_radius_change` · `attestation_missing` |
 | `qryx` | `crypto_finding` · `crypto_drift` · `policy_violation` · `evidence_signed` |
-| `wardryx` | `policy_allow` (info) · `policy_deny` (high) · `approval_requested` (medium) · `approval_granted` (info) · `approval_denied` (high) · `approval_timeout` (high) · `approval_unanswered` (high) |
+| `wardryx` | `policy_allow` (info) · `policy_deny` (high) · `approval_requested` (medium) · `approval_granted` (info) · `approval_denied` (high) · `approval_timeout` (high) · `approval_unanswered` (high) · `policy_updated` (high) |
 | `verdryx` | `eval_run` (info) · `quality_score` (info) · `quality_drift` (high) |
 | `mockryx` | `sim_run` (info) · `sim_finding` (high) · `blast_radius_measured` (medium) |
 | `console` | `console_command` |
+| `heraldyx` | `alert_sent` (info) |
 
 
 A row here is a CLAIM that the source writes those types into this envelope
@@ -370,6 +372,26 @@ none. Until this row existed the console was emitting an undeclared extension
 onto a shared bus: nothing failed conformance, because v0.2's `source` and
 `type` are open strings, and no consumer had been told the event exists.
 
+The `heraldyx` row is the mail-out: it reads the shared event log to decide
+what is worth a human's attention now, and for every message it sends it
+appends one `alert_sent` event to a hash-chained journal of its own. Read
+from `internal/record/record.go` rather than from its docs: `source` is
+`heraldyx`, `type` is `alert_sent`, severity is always `info`, and `data`
+carries exactly `kind` (`alert`, `digest`, or `suppression`), `about` (the
+dedup key the message was raised under), `to` (the recipients), `transport`,
+and `outcome` (`accepted` or `refused`, with a truncated `error` on refusal);
+it never carries a message body or any field copied from another plane's
+event. That journal is deliberately not the log the rest of this table's
+rows append to: heraldyx mounts the planes' event log read-only, and writing
+its own record into that directory would mean mounting it writable, handing
+a compromised notifier the ability to corrupt the trail it reads. So the
+record lives on heraldyx's own state volume, same envelope, same library,
+same verifier, and trailryx's record plane already reads it there directly
+(`trailryx-node events --file`), not through this bus. `heraldyx` is
+therefore the one row in this table whose events do not travel the shared
+log: the registry answers who writes the envelope, not which file it lands
+in, and on that question heraldyx belongs here as much as any other row.
+
 
 `approval_timeout` and `approval_unanswered` are two different facts and the
 names are worth reading carefully. The first fires when an agent REDEEMS an
@@ -378,6 +400,17 @@ the agent came back late. The second fires when a hold has simply sat
 undecided: nothing decayed, nobody answered. Until 2026-08-03 only the first
 existed, so an agent blocked on an unwatched queue produced no event at all,
 and the name that sounded like it covered that case did not.
+
+`policy_updated` is the one wardryx type with no governed agent behind it. It
+fires from the admin-only policy-as-code routes, `PUT` and `DELETE
+/v1/policies/{id}` in `internal/api/api.go` (`evPolicyUpdated`), reporting an
+operator changing the rules rather than an agent doing anything, so
+`agent_id` carries a synthetic identity instead,
+`agent://wardryx.internal/admin/policy-api`, naming the API as its own
+well-formed subject rather than leaving the field empty or borrowing an
+unrelated agent's id. `data` carries `action` (`put` or `delete`),
+`policy_id`, `policy_version`, and `decided_by`; both emission sites set
+`severity: high`.
 
 `policy_deny` appears under two sources on purpose. The same fact, an action
 refused by policy, is decided in two places: at the policy plane by wardryx,

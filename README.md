@@ -78,8 +78,9 @@ flowchart TB
   TF -->|"outcome-tagged traces"| VX
   MX["Mockryx: pre-prod safety rehearsal"] -->|"hostile scenarios"| TF
   MX ==>|"sim events"| BUS
-  BUS ==> HX["heraldyx: reads the log, mails you"]
+  BUS ==> HX["reads the log, mails you (heraldyx)"]
   HX -->|"one mail, a view and never an action"| OPS["your mailbox"]
+  HX ==>|"alert_sent"| HJ[("heraldyx's own hash-chained journal, not this bus")]
   YOU(["you, in a browser over your own tunnel"]) --> GX[["Genaryx: the console over all of it"]]
   GX -->|"signed commands: the kill, an approval, a policy"| CL
   GX -->|"signed commands"| WX
@@ -272,10 +273,11 @@ Registered sources today:
 | `engram` | memory governance | `memory_written` · `reflection_run` · `contradiction_found` · `memory_forgotten` |
 | `idryx` | identity and access governance | **RESERVED, not emitted today:** `excessive_privilege` · `behavior_anomaly` · `impossible_travel` · `mfa_fatigue` · `new_device` · `blast_radius_change` · `attestation_missing` |
 | `qryx` | cryptographic evidence | `crypto_finding` · `crypto_drift` · `policy_violation` · `evidence_signed` |
-| `wardryx` | policy and approval gating (wave 2) | `policy_allow` (info) · `policy_deny` (high) · `approval_requested` (medium) · `approval_granted` (info) · `approval_denied` (high) · `approval_timeout` (high) · `approval_unanswered` (high) |
+| `wardryx` | policy and approval gating (wave 2) | `policy_allow` (info) · `policy_deny` (high) · `approval_requested` (medium) · `approval_granted` (info) · `approval_denied` (high) · `approval_timeout` (high) · `approval_unanswered` (high) · `policy_updated` (high) |
 | `verdryx` | evaluation and quality drift (wave 2) | `eval_run` (info) · `quality_score` (info) · `quality_drift` (high) |
 | `mockryx` | simulation and blast-radius testing (wave 2) | `sim_run` (info) · `sim_finding` (high) · `blast_radius_measured` (medium) |
 | `console` | the operator console's own privileged actions (Genaryx) | `console_command` |
+| `heraldyx` | operator notification (mail out) | `alert_sent` (info) |
 
 The `console` row is Genaryx, the operator's own console: one `console_command`
 per privileged mutation it makes (kill a run, change a budget, decide an
@@ -283,6 +285,13 @@ approval, acknowledge an incident, build an evidence pack, approve a copilot
 proposal, issue or revoke an operator WireGuard peer), which action it was in
 `data.action`, the signed outcome in the rest of `data`, and no `severity` at
 all. SPEC.md §6.2 carries the detail.
+
+The `heraldyx` row is the mail-out: one `alert_sent` per message sent,
+`severity: info`, appended to a hash-chained journal of its own rather than
+to this bus, because heraldyx mounts the planes' log read-only and writing
+into it would mean mounting it writable. trailryx's record plane reads that
+journal directly, file to file, not through this bus. SPEC.md §6.2 carries
+the detail, including exactly what `data` holds.
 
 A row is a claim that the source writes those types into this envelope **today**,
 not a list of what it detects or means to. Idryx is the one row that is not:

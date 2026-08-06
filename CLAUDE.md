@@ -58,6 +58,7 @@ pip install "jsonschema>=4.18"
 python .github/scripts/validate_examples.py
 ./scripts/schema-matches-spec.sh
 ./scripts/version-compatibility.sh
+./scripts/artifacts-match-registry.sh
 ```
 
 This is what CI runs. It validates every example against the schemas, which is
@@ -102,6 +103,15 @@ an absent invariant.
 6. **Reserved conventions stay reserved.** `labels.version` (4.6) is reserved
    precisely so nobody redefines it locally. Adding a new reserved convention
    is a spec decision. *(not enforced)*
+7. **No artifact in this repo contradicts the 6.2 event-type registry.** The
+   registry is the only statement of which product emits which types today, and
+   it is invisible to both other gates: `source` and `type` are open strings by
+   design (6.1), so an example, a diagram or a second table claiming a producer
+   that emits nothing validates clean and matches the prose.
+   *(partly gated: `scripts/artifacts-match-registry.sh`, which reads 6.2 as
+   the source of truth and measures `examples/*.ndjson`, README's copy of the
+   table, the `<text>` nodes of the SVGs and the flowchart's arrows into the
+   bus against it. Free prose is deliberately out of scope. See below.)*
 
 ## Decisions that have no gate yet
 
@@ -152,6 +162,23 @@ added in a later version, which is the opposite of what 6.4 promises. The
 middle path is to keep the schema permissive and have the validator warn on
 unknown keys in `examples/` only, since our own examples have no reason to
 carry one. That is a decision for the user, not a fix to apply quietly.
+
+Invariant 7 is `scripts/artifacts-match-registry.sh`, and it exists because the
+two checks above cannot see the registry at all. They compare schema with prose
+and examples with schema; 6.2 is neither, since `source` and `type` are open
+strings. Three artifacts claimed idryx as an emitter from the first commit,
+the 2026-08-03 audit corrected only the prose, and each artifact was found by
+eye afterwards. The script reads 6.2, fails on a source it does not register,
+on a source whose row says it emits nothing, and on a type attributed to a
+producer whose row does not list it, in the examples, in README's copy of the
+table, in the SVGs' text nodes and in the flowchart's arrows.
+
+**Its limit is prose, and the limit is chosen rather than left.** The sentence
+in 6.4 listing existing emitters is wrong in exactly the way this gate is meant
+to catch, and no script can judge it: it would have to be told apart from 6.2's
+own "idryx emits nothing into this envelope", which puts the same source beside
+the same verb and is correct. In the diagrams the gate judges attribution, not
+direction, because nothing in an SVG says which box is a producer.
 
 Invariants 1 and 6 are judgement and stay judgement.
 

@@ -352,8 +352,6 @@ refused by policy, is decided in two places: at the policy plane by wardryx,
 and inside the gateway by its own evaluator or a wasm module. A consumer that
 wants to know WHICH reads `source`, and one that only wants to know what
 happened does not have to learn two names for it.
-| `verdryx` | `eval_run` (info) · `quality_score` (info) · `quality_drift` (high) |
-| `mockryx` | `sim_run` (info) · `sim_finding` (high) · `blast_radius_measured` (medium) |
 
 The first four TokenFuse types are its existing incident taxonomy verbatim —
 zero renaming. New types may be added freely within a `source`; renames or

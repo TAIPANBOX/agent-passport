@@ -72,6 +72,7 @@ flowchart TB
   ENG ==> BUS
   BUS ==> IDX["Idryx: identity graph, detectors, Agent-BOM"]
   BUS ==> QX["Qryx: crypto / PQC, passport + hash-chain scan"]
+  QX ==>|"crypto events"| BUS
   BUS ==> VX["Verdryx: quality / drift"]
   VX ==>|"quality events"| BUS
   TF -->|"outcome-tagged traces"| VX

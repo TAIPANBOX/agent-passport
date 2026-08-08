@@ -100,9 +100,23 @@ an absent invariant.
    a stream written by an older implementation must keep validating. Tightening
    a constraint is a version bump.
    *(gate: `scripts/version-compatibility.sh`)*
-6. **Reserved conventions stay reserved.** `labels.version` (4.6) is reserved
-   precisely so nobody redefines it locally. Adding a new reserved convention
-   is a spec decision. *(not enforced)*
+6. **Reserved conventions stay reserved.** `labels.version` (4.6) and
+   `AGENT_PASSPORT_ID` (3.3) are reserved precisely so nobody redefines them
+   locally. Adding a new reserved convention is a spec decision.
+
+   Both are conventions rather than schema changes, and that is the whole
+   reason they are cheap: no field enters any document, no validator changes,
+   and a Passport is exactly as valid with or without either. The cost of
+   getting one wrong is paid elsewhere: a name redefined locally makes two
+   products disagree about the same string, and nothing in `schemas/` can see
+   it, because there is nothing there to see.
+
+   `AGENT_PASSPORT_ID` carries one extra obligation the other does not, and it
+   is the sentence most likely to be lost first: **it is a self-declaration and
+   must never be read as attestation.** A process sets its own environment. Any
+   consumer that lets an identity learned this way satisfy a control requiring
+   an attested one has broken 3.3 and §2 together, and it will look like it is
+   working. *(not enforced)*
 7. **No artifact in this repo contradicts the 6.2 event-type registry.** The
    registry is the only statement of which product emits which types today, and
    it is invisible to both other gates: `source` and `type` are open strings by

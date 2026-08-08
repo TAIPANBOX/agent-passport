@@ -91,6 +91,61 @@ Run-scoped correlation stays exactly as TokenFuse does it today:
 `run_id` names one task execution, `parent_run_id` links sub-runs. This spec
 adds nothing there — it only standardizes *who* is running.
 
+### 3.3 `AGENT_PASSPORT_ID` (reserved environment-variable convention)
+
+§3.2 says where the identifier goes inside each product. It does not say where
+it goes on a **host**, and that gap has a consequence: a host-level observer
+sees processes, and a process carries no agent identity anywhere an observer
+can read. §4.5 already assigns such an observer a job, comparing declared model
+use against "what it is seen reaching on the network (an egress sensor)", while
+leaving it no way to say which agent it saw. Today an egress sensor can report
+a process name, which the process picks itself and every instance of a binary
+shares.
+
+This subsection reserves one environment variable so that a process can carry
+its own Passport ID where the operating system will show it.
+
+```
+AGENT_PASSPORT_ID=agent://acme-bank.example/support/tier1-bot
+```
+
+- The value is a canonical agent ID exactly as §3.1 defines it. A value that
+  does not parse MUST be treated as absent rather than repaired or truncated.
+- Whoever **launches** the agent sets it: a container spec, a systemd unit, a
+  process supervisor, a shell wrapper. The spec does not say which, because
+  that is the operator's business and differs per runtime.
+- Optional. An absent variable means "not declared", never "not an agent", the
+  same reading `filesystem` (§4.4) and `models` (§4.5) already take. A consumer
+  that does not model this MUST ignore it.
+- Reserved so nobody redefines it locally, exactly as `labels.version` (§4.6)
+  is reserved. Like that one, this is a convention rather than a schema change:
+  no field is added to any document, and a Passport is unaffected either way.
+
+**This is a self-declaration and MUST NOT be read as attestation.** A process
+sets its own environment, so it can set this variable to another agent's ID, or
+to an ID that was never issued. That is the same standing this spec already
+gives the Passport itself (§2: it names an agent, it does not prove
+possession), and proof lives in `attestation.method` (§4.3), which this does not
+touch and does not weaken. A consumer MUST record an identity learned this way
+as claimed, and MUST NOT let it satisfy a control that requires an attested
+one. An observer that reports it SHOULD make the distinction visible in what it
+reports, so that an operator reading a finding can tell an identity a process
+asserted from one an infrastructure established.
+
+**What it is worth anyway**, since the paragraph above could be read as talking
+it out of existence: on a host that is not already compromised, this turns "a
+process calling itself python3 reached an LLM API" into "this agent reached an
+LLM API", which is the difference between a finding an operator can act on and
+one they can only investigate. Against an adversary on the host it proves
+nothing, and neither does anything else at this layer.
+
+**Reading it is racy, and a reader must expect to lose.** The environment of a
+process is readable while that process lives (`/proc/<pid>/environ` on Linux,
+subject to that platform's permissions). A short-lived agent, which is exactly
+the one worth attributing, may be gone before an observer looks. A consumer
+MUST treat a failed read as "not declared" and MUST NOT retry in a way that
+turns an observation into a scan of processes it has no other reason to touch.
+
 ## 4. The Passport document
 
 A Passport is a small JSON document describing one agent. It lives wherever

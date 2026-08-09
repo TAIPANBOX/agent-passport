@@ -59,6 +59,7 @@ python .github/scripts/validate_examples.py
 ./scripts/schema-matches-spec.sh
 ./scripts/version-compatibility.sh
 ./scripts/artifacts-match-registry.sh
+./scripts/gates-have-teeth.sh     # invariant 8; needs a clean tree and jsonschema
 ```
 
 This is what CI runs. It validates every example against the schemas, which is
@@ -126,6 +127,45 @@ an absent invariant.
    the source of truth and measures `examples/*.ndjson`, README's copy of the
    table, the `<text>` nodes of the SVGs and the flowchart's arrows into the
    bus against it. Free prose is deliberately out of scope. See below.)*
+
+8. **A check must be able to tell "did not fail" from "did not run", and every
+   gate here has been made to fail on purpose to prove it can.** The three
+   script gates already refuse when their subject is absent, in five distinct
+   ways: no schemas found, jsonschema unavailable, the 6.2 heading gone, the
+   registry table header gone, a registry that parsed to too few sources. And
+   invariant 3 says in as many words that the validator was "verified by
+   breaking it three ways". Every one of those sentences was true. Every one
+   was established by hand, once, in the session that wrote the script, and
+   nothing re-ran any of them. The three mutations named in invariant 3 are now
+   three cases here, run on every push.
+
+   This repository is where that matters most in the estate, and the reason is
+   the blast radius above rather than anything about the scripts. A gate here
+   that has quietly stopped comparing breaks nothing in this repo: there is no
+   service to break. It breaks in nine other repositories, at whatever pace
+   each of them next reads `SPEC.md`, and the symptom is two products
+   conforming to different contracts while both report green.
+
+   **It mutates `schemas/` and `SPEC.md` in place and restores them**, which is
+   not the change this file's escalation rule is about: nothing is committed,
+   the tree is asserted clean before the run reports success, and a run that
+   left residue fails instead. A spec change is still a decision for the user.
+   *(gate: `scripts/gates-have-teeth.sh`, 11 cases: seven real faults each gate
+   must catch, two non-faults they must not, and two subjects taken away
+   entirely. The non-faults are the ones worth keeping: prose that names
+   something no schema declares is deliberately allowed by invariant 2's
+   half-surface, and a raised ceiling is the widening 6.4 promises.)*
+
+   **What it does not cover.** It cannot test itself. It proves each gate
+   catches the faults named in it, not every fault of that kind. It found no
+   hole in any of the four checks.
+
+   Writing it did find one in ITSELF, and it is the failure mode this whole
+   harness exists for. A case asserted the validator fails saying `ts`, and it
+   passed on a machine with no jsonschema, because the validator died on its
+   import line and the traceback contained the word `scripts`. A three-letter
+   needle matched a path. The needles are now specific strings, and the harness
+   refuses to start without jsonschema at all.
 
 ## Decisions that have no gate yet
 

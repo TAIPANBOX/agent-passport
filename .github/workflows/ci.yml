@@ -29,3 +29,11 @@ jobs:
         run: ./scripts/version-compatibility.sh
       - name: artifacts match the SPEC 6.2 registry
         run: ./scripts/artifacts-match-registry.sh
+
+      # Last, because it mutates tracked files, including schemas/ and SPEC.md,
+      # and restores them. Nothing is committed and the tree is asserted clean
+      # before it reports success. It needs a clean tree and says so plainly,
+      # so it also reports any earlier step that starts writing into the
+      # checkout.
+      - name: the gates above can still fail
+        run: ./scripts/gates-have-teeth.sh

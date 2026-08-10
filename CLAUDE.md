@@ -227,12 +227,23 @@ on a source whose row says it emits nothing, and on a type attributed to a
 producer whose row does not list it, in the examples, in README's copy of the
 table, in the SVGs' text nodes and in the flowchart's arrows.
 
-**Its limit is prose, and the limit is chosen rather than left.** The sentence
-in 6.4 listing existing emitters is wrong in exactly the way this gate is meant
-to catch, and no script can judge it: it would have to be told apart from 6.2's
-own "idryx emits nothing into this envelope", which puts the same source beside
-the same verb and is correct. In the diagrams the gate judges attribution, not
-direction, because nothing in an SVG says which box is a producer.
+**Its limit is prose, and the limit is chosen rather than left.** The example
+this paragraph used until 2026-08-10 is itself the argument: it said the
+sentence in 6.4 was wrong in exactly the way this gate is meant to catch, and
+that no script could judge it, because it would have to be told apart from
+6.2's own "idryx emits nothing into this envelope", which was correct.
+
+That second sentence no longer exists. idryx gained an event writer and 6.2's
+row stopped saying RESERVED on 2026-08-10, so this file was citing, as the
+example of a TRUE statement a gate must not flag, a statement that had been
+deleted. An instruction file quoting a line that is gone is worse than one
+quoting a line that is wrong, because a reader goes looking and concludes they
+are reading the wrong file.
+
+The limit stands and the reason is unchanged: 6.4 talks ABOUT the registry in
+prose, the gate reads the registry itself, and no script can judge a sentence
+that describes what a table means. In the diagrams the gate judges attribution,
+not direction, because nothing in an SVG says which box is a producer.
 
 Invariants 1 and 6 are judgement and stay judgement.
 

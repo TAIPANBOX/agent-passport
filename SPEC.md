@@ -146,6 +146,38 @@ the one worth attributing, may be gone before an observer looks. A consumer
 MUST treat a failed read as "not declared" and MUST NOT retry in a way that
 turns an observation into a scan of processes it has no other reason to touch.
 
+**On the wire, a claimed identity is written `claimed:` before the ID**, and
+that spelling is normative:
+
+```
+claimed:agent://acme-bank.example/support/tier1-bot
+```
+
+An observer that reports such an identity in the §6 envelope MUST write it in
+this form in `agent_id`, MUST stamp the event `taipanbox.dev/agent-event/v0.3`
+(§6.4), and MUST NOT write the bare ID. A consumer MUST NOT strip the prefix to
+obtain a subject it then treats as established, and MUST NOT let a value in
+this form satisfy a control requiring an attested identity.
+
+**Why the marker is inside the identifier and not beside it.** The paragraph
+above says an observer SHOULD make the distinction visible in what it reports,
+and a sibling field cannot deliver that. §6.1 obliges consumers to ignore
+fields they do not know, so a consumer that has not been updated reads
+`agent_id`, finds a bare ID, and presents a self-declaration as an established
+one. That is this subsection's own MUST NOT, reached by a consumer doing
+exactly what the spec told it to do.
+
+Inside the identifier the burden is the other way round: a consumer cannot
+present the claim as established without deliberately removing a prefix nothing
+told it to remove. It also costs nothing to read back, since the ID is one
+`claimed:` away, and it survives truncation in a subject line or a table
+because the marker leads.
+
+**What it is NOT.** It is not a second identity authority: `claimed://` would
+read as one, and this is a qualifier on an `agent://` ID rather than a new
+scheme. The inner ID keeps §3.1's grammar exactly, so a value that would not be
+a valid agent ID is not made valid by being claimed.
+
 ## 4. The Passport document
 
 A Passport is a small JSON document describing one agent. It lives wherever
@@ -340,9 +372,26 @@ about an agent fits this envelope:
   wrong and puts a name on an alert that did not do the thing.
 
   Such facts belong in the producing product's own API and console until this
-  envelope grows a subject kind, which would be a change every consumer has to
-  make together. TokenFuse's `spend_spike` is the live example: raised,
-  displayed, and deliberately never exported.
+  envelope grows a subject kind. TokenFuse's `spend_spike` is the live example:
+  raised, displayed, and deliberately never exported.
+
+  **This sentence used to end "which would be a change every consumer has to
+  make together", and v0.3 is the counter-example.** A subject kind can be
+  added without lockstep when two things are true of it: the distinction lives
+  INSIDE `agent_id`, so a consumer cannot read the subject without meeting it,
+  and the version stamp changes, so the consumers that do gate on a version
+  refuse the event instead of guessing. Under those two conditions an
+  unupdated consumer is safe by refusal or safe by seeing the truth, and each
+  one adopts on its own schedule. A subject kind carried in a SIBLING field
+  would still need the lockstep, for the reason §3.3 gives.
+
+  **`agent_id` may carry a claimed subject, and only under v0.3.** The form is
+  `claimed:agent://<trust-domain>/<path>` (§3.3), it is written only by an
+  observer reporting a self-declaration, and it is the one value in this field
+  that is not an established identity. A producer emitting one MUST stamp
+  `taipanbox.dev/agent-event/v0.3`; under v0.1 and v0.2 this field is an
+  established subject and nothing else, which is what makes the version stamp
+  load-bearing rather than decorative.
 - `source`: as of schema v0.2, an open string (`type: string, minLength: 1`),
   not a closed enum. Adding a source is additive and does not require a
   schema bump. Consumers MUST ignore events from a `source` they do not
@@ -404,7 +453,11 @@ aspirational:
   would have given a consumer two producers for one name.
 
   It now emits ONE type, `identity_finding`, with the detector name in
-  `data.detector`. Registering 25 types would have put 25 rows here, 25
+  `data.detector`, under v0.2 when the subject is established and under v0.3
+  when it is claimed (§3.3, §6.4). The type does not change with the basis:
+  the basis is in the subject, so a consumer routes on one name and reads which
+  kind of subject it got from the id in front of it.
+  Registering 25 types would have put 25 rows here, 25
   severities beside them, 25 entries in every consumer's render catalogue, and
   would have made each new detector a nine-repository spec change, which is the
   tax that stops detectors being written. One type also settles the collision by
@@ -560,9 +613,34 @@ Consumers MUST accept events whose `schema` is either
 `taipanbox.dev/agent-event/v0.1` or `taipanbox.dev/agent-event/v0.2`.
 Emitters already on v0.1 may keep emitting v0.1 events; those remain valid,
 and nothing requires them to move. New wave-2 services (wardryx, verdryx,
-mockryx) emit v0.2. The two versions differ only in the `source` field
+mockryx) emit v0.2. Those two versions differ only in the `source` field
 (closed enum in v0.1, open string in v0.2, §6.1); every other field is
 unchanged.
+
+**v0.3 (`schemas/agent-event.v0.3.schema.json`) is different in kind from that
+bump, and the difference is the point.** Its only delta from v0.2 is that
+`agent_id` also accepts the `claimed:` form (§3.3), which widens the pattern
+and raises `maxLength` from 255 to 263, the eight bytes of the marker. Every
+v0.2 event validates against v0.3 with its version string swapped, so v0.3 is a
+widening exactly as v0.2 was of v0.1.
+
+**Accepting v0.3 is NOT a MUST, and that is deliberate.** A consumer that
+accepts only v0.1 and v0.2 refuses a v0.3 event, and refusing is the correct
+answer for a consumer that does not know what a claimed subject is: it is the
+one version where `agent_id` can hold something that is not an established
+identity, so a reader that has not been told MUST NOT be handed it. A consumer
+adopts v0.3 when it has decided what a claim means to it, and until then it
+loses only events it could not have read safely.
+
+The cost of that choice is stated rather than left to be discovered: an
+operator running a v0.2-only consumer sees no claimed-subject events at all,
+and the consumer SHOULD count what it refused rather than dropping it in
+silence, so the gap is visible as a number rather than as an absence.
+
+**A producer MUST NOT stamp v0.3 on an event whose subject is established.**
+The version is how a reader knows a claim is possible; stamping it on ordinary
+traffic would take that signal away from every consumer at once and force the
+lockstep this design exists to avoid.
 
 That v0.1 enum is a closed list of four names, `tokenfuse`, `engram`,
 `idryx` and `qryx`, and a list of permitted values is not a list of

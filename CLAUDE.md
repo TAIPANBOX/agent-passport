@@ -11,8 +11,8 @@ things stand, read `VALIDATION.md` and the git tags.
    interlock: identity (3), the passport document (4), the delegation chain (5)
    and the event envelope (6) constrain each other, and 6.4 governs how any of
    them may change.
-2. `schemas/`. Three files: the passport schema, and the event schema at v0.1
-   and v0.2. These are the machine form of `SPEC.md`.
+2. `schemas/`. Four files: the passport schema, and the event schema at v0.1,
+   v0.2 and v0.3. These are the machine form of `SPEC.md`.
 3. `examples/`. `passport.json` and `events.ndjson` are what CI validates.
 
 ## What this repo is
@@ -92,12 +92,19 @@ an absent invariant.
    key passes silently. Writing `agent_id` where the field is `id` validates
    clean, and the passport simply has no identifier as far as any consumer is
    concerned. The gate catches malformed values, not misspelled field names.
-4. **Both event schema versions stay live.** v0.1 and v0.2 are both valid
-   input. Retiring v0.1 is a breaking change for every consumer that has not
-   migrated, and needs the user. *(partly gated: the validator covers whichever
-   versions the examples exercise, not the promise to keep them)*
+4. **Every event schema version stays live.** v0.1, v0.2 and v0.3 are all
+   valid input. Retiring one is a breaking change for every consumer that has
+   not migrated, and needs the user. *(partly gated: the validator covers
+   whichever versions the examples exercise, not the promise to keep them)*
+
+   **Accepting v0.3 is the one asymmetry, and it is deliberate** (SPEC 6.4). A
+   consumer MUST accept v0.1 and v0.2; it MAY refuse v0.3, because v0.3 is the
+   only version where `agent_id` can hold a claimed subject, and a reader that
+   has not decided what a claim means to it is better off refusing than
+   guessing. Do not "fix" a consumer that refuses v0.3 by making it accept
+   without also deciding what it does with a claim.
 5. **An optional field never quietly becomes required**, and more generally
-   v0.2 is a WIDENING of v0.1. Optionality is a compatibility promise under 6.4:
+   each version is a WIDENING of the one before it. Optionality is a compatibility promise under 6.4:
    a stream written by an older implementation must keep validating. Tightening
    a constraint is a version bump.
    *(gate: `scripts/version-compatibility.sh`)*

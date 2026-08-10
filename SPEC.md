@@ -446,11 +446,19 @@ producer's code on 2026-08-03, which is when this table stopped being partly
 aspirational:
 
 - **`idryx` emitted nothing into this envelope until 2026-08-10**, and the
-  seven names reserved for it were wrong in both directions. It ships 25
-  detectors; two reserved names (`excessive_privilege`, `blast_radius_change`)
-  had no producer anywhere, twenty detectors had no reserved name, and
-  `mcp_drift` was reserved for idryx while being a live `tokenfuse` type, which
-  would have given a consumer two producers for one name.
+  seven names reserved for it were wrong in both directions. It shipped 25
+  detectors at the moment that was measured; two reserved names
+  (`excessive_privilege`, `blast_radius_change`) had no producer anywhere,
+  twenty detectors had no reserved name, and `mcp_drift` was reserved for idryx
+  while being a live `tokenfuse` type, which would have given a consumer two
+  producers for one name.
+
+  **That count is a dated measurement and not a property of idryx**, which is
+  the whole reason the reserved list was wrong: a number in this table ages
+  separately from the thing it counts. It was 26 within hours of being written
+  here. What knows is idryx's own `scripts/detectors-complete.sh`, which reads
+  the `Name()` methods; the registry below does not depend on the figure,
+  because one type is one row whatever the set does.
 
   It now emits ONE type, `identity_finding`, with the detector name in
   `data.detector`, under v0.2 when the subject is established and under v0.3

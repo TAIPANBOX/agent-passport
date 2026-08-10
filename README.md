@@ -71,6 +71,7 @@ flowchart TB
   ENG["Engram: memory"] -->|"reflect via base_url"| TF
   ENG ==> BUS
   BUS ==> IDX["Idryx: identity graph, detectors, Agent-BOM"]
+  IDX ==>|"identity_finding"| BUS
   BUS ==> QX["Qryx: crypto / PQC, passport + hash-chain scan"]
   QX ==>|"crypto events"| BUS
   BUS ==> VX["Verdryx: quality / drift"]
@@ -271,7 +272,7 @@ Registered sources today:
 |---|---|---|
 | `tokenfuse` | spend governance | `budget_exhausted` · `sustained_loop` · `spend_spike` · `fanout_explosion` · `breaker_tripped` (medium) · `dlp_block` · `taint_block` · `mcp_drift` · `identity_mismatch` (high) · `tool_call` (low) · `budget_threshold` (medium) · `run_killed` (high) · `unit_cap_exceeded` (high) · `policy_deny` (high) |
 | `engram` | memory governance | `memory_written` · `reflection_run` · `contradiction_found` · `memory_forgotten` |
-| `idryx` | identity and access governance | **RESERVED, not emitted today:** `excessive_privilege` · `behavior_anomaly` · `impossible_travel` · `mfa_fatigue` · `new_device` · `blast_radius_change` · `attestation_missing` |
+| `idryx` | identity and access governance | `identity_finding` (severity per finding) |
 | `qryx` | cryptographic evidence | `crypto_finding` · `crypto_drift` · `policy_violation` · `evidence_signed` |
 | `wardryx` | policy and approval gating (wave 2) | `policy_allow` (info) · `policy_deny` (high) · `approval_requested` (medium) · `approval_granted` (info) · `approval_denied` (high) · `approval_timeout` (high) · `approval_unanswered` (high) · `policy_updated` (high) |
 | `verdryx` | evaluation and quality drift (wave 2) | `eval_run` (info) · `quality_score` (info) · `quality_drift` (high) |

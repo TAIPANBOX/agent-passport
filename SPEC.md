@@ -381,7 +381,7 @@ self-protection, not third-party or adversarial traffic.
 |---|---|
 | `tokenfuse` | `budget_exhausted` · `sustained_loop` · `spend_spike` · `fanout_explosion` · `breaker_tripped` (medium) · `dlp_block` · `taint_block` · `mcp_drift` · `identity_mismatch` (high) · `tool_call` (low) · `budget_threshold` (medium) · `run_killed` (high) · `unit_cap_exceeded` (high) · `policy_deny` (high) |
 | `engram` | `memory_written` · `reflection_run` · `contradiction_found` · `memory_forgotten` |
-| `idryx` | RESERVED, not emitted today: `excessive_privilege` · `behavior_anomaly` · `impossible_travel` · `mfa_fatigue` · `new_device` · `blast_radius_change` · `attestation_missing` |
+| `idryx` | `identity_finding` (severity per finding) |
 | `qryx` | `crypto_finding` · `crypto_drift` · `policy_violation` · `evidence_signed` |
 | `wardryx` | `policy_allow` (info) · `policy_deny` (high) · `approval_requested` (medium) · `approval_granted` (info) · `approval_denied` (high) · `approval_timeout` (high) · `approval_unanswered` (high) · `policy_updated` (high) |
 | `verdryx` | `eval_run` (info) · `quality_score` (info) · `quality_drift` (high) |
@@ -396,12 +396,20 @@ today, not a list of what it detects or intends to. Checked against every
 producer's code on 2026-08-03, which is when this table stopped being partly
 aspirational:
 
-- **`idryx` emits nothing into this envelope.** Its detections leave by OTLP
-  and by Slack, so all seven names above are reserved rather than live. Four of
-  them are its internal detector names, and `attestation_missing` had never had
-  a producer anywhere. A consumer that built a handler for one of these would
-  have waited forever, and one downstream product had already written the
-  operator-facing description for two of them.
+- **`idryx` emitted nothing into this envelope until 2026-08-10**, and the
+  seven names reserved for it were wrong in both directions. It ships 25
+  detectors; two reserved names (`excessive_privilege`, `blast_radius_change`)
+  had no producer anywhere, twenty detectors had no reserved name, and
+  `mcp_drift` was reserved for idryx while being a live `tokenfuse` type, which
+  would have given a consumer two producers for one name.
+
+  It now emits ONE type, `identity_finding`, with the detector name in
+  `data.detector`. Registering 25 types would have put 25 rows here, 25
+  severities beside them, 25 entries in every consumer's render catalogue, and
+  would have made each new detector a nine-repository spec change, which is the
+  tax that stops detectors being written. One type also settles the collision by
+  construction: `mcp_drift` stays tokenfuse's wire string and idryx's detector
+  of that name travels in `data`.
 - **`verdryx` and `mockryx` were missing** although both have emitted for some
   time. A source absent from this table is worse than a wrong row: nothing
   tells a consumer those events exist at all.

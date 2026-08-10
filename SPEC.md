@@ -566,10 +566,18 @@ unchanged.
 
 That v0.1 enum is a closed list of four names, `tokenfuse`, `engram`,
 `idryx` and `qryx`, and a list of permitted values is not a list of
-emitters: `idryx` is in the enum and emits nothing into this envelope
-(§6.2). This paragraph named all four as emitters until 2026-08-06, three
-days after the audit that corrected 6.2, because that audit read the
-registry and never came back here.
+emitters. As of 2026-08-10 all four of them do emit, so the distinction has
+no live example here, and saying that is better than keeping one that has
+stopped being true.
+
+**This paragraph has now been wrong twice, for the same reason both times.**
+It named all four as emitters until 2026-08-06, three days after the audit
+that corrected 6.2, because that audit read the registry and never came back
+here. It then used `idryx` as the counter-example until 2026-08-10, when
+idryx gained an event writer and 6.2's row stopped saying RESERVED, and
+whoever made that change had to be reminded to come back here again. The
+registry is gated; this sentence is prose about the registry, and prose about
+a gated thing is the part that drifts.
 
 ### 6.5 `prev_hash` canonicalization
 

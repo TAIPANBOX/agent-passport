@@ -369,6 +369,7 @@ Registered sources today:
 | `mockryx` | simulation and blast-radius testing (wave 2) |
 | `console` | the operator console's own privileged actions (Genaryx) |
 | `heraldyx` | operator notification (mail out) |
+| `scopyx` | web-egress enforcement (agents fetch through it) |
 
 wardryx, verdryx, and mockryx are wave-2 services; like the original four,
 this contract governs an operator's own agents, for the operator's own
@@ -387,6 +388,7 @@ self-protection, not third-party or adversarial traffic.
 | `mockryx` | `sim_run` (info) · `sim_finding` (high) · `blast_radius_measured` (medium) |
 | `console` | `console_command` |
 | `heraldyx` | `alert_sent` (info) |
+| `scopyx` | `web_fetch` (low) · `web_blocked` (high) |
 
 
 A row here is a CLAIM that the source writes those types into this envelope
@@ -446,6 +448,44 @@ same verifier, and trailryx's record plane already reads it there directly
 therefore the one row in this table whose events do not travel the shared
 log: the registry answers who writes the envelope, not which file it lands
 in, and on that question heraldyx belongs here as much as any other row.
+
+The `scopyx` row is the web-egress enforcement point: agents fetch THROUGH it,
+and every destination is decided against the policy plane before anything
+leaves. Read from `internal/record/record.go` rather than from its docs:
+`source` is `scopyx`, and the two types are `web_fetch` for a fetch that
+happened and `web_blocked` for one that did not. Severity is fixed per type in
+code rather than chosen at the emission site, which is why the row can state it:
+a severity a call site can pick drifts between call sites, and every downstream
+count of "how many high events" then measures who wrote the call rather than
+what happened.
+
+`data` carries `origin` and `url_sha384`, and deliberately NOT the URL. A URL
+is personal data: `https://crm.example/customers/12345?email=jane@example.com`
+is an address and also a name, an identifier and a contact detail, and the path
+and query string are exactly where an identifier or a session token lives. They
+are never assembled into the event, so the record cannot leak what it never
+held. An operator who needs the full URL sets `SCOPYX_RETAIN=payload`, and the
+field is then named `url_unprotected`, because that plane has no subject-keyed
+payload store yet and a field called `url` would imply one. A `web_fetch` adds
+`backend`, `enforcement` and `content_bytes`; a `web_blocked` adds `verdict` and
+`reason`.
+
+`enforcement` is the field a consumer should not skip. It is `per_request` when
+every request the fetch made was decided, and `navigation_only` when the
+navigation was decided and the page's own subresources were fetched by a service
+this plane does not drive. Both are honest states and they are not the same
+guarantee, so a consumer counting governed fetches without reading this field is
+counting two different things as one.
+
+Like `heraldyx`, and for the same reason one plane further out, scopyx writes
+its own hash-chained journal rather than the shared log. It is the one component
+in the estate that reaches the public internet on purpose, which makes it the
+last one that should be able to rewrite anybody else's record.
+
+A missing `agent_id` is SKIPPED and counted, never fabricated. Section 6.1
+forbids inventing one and the reason is not pedantry: a fallback subject, a
+"various" agent or an org id in that field makes every downstream count wrong
+and puts a name on an alert that did not do the thing.
 
 
 `approval_timeout` and `approval_unanswered` are two different facts and the

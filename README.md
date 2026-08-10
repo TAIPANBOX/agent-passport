@@ -278,6 +278,7 @@ Registered sources today:
 | `mockryx` | simulation and blast-radius testing (wave 2) | `sim_run` (info) · `sim_finding` (high) · `blast_radius_measured` (medium) |
 | `console` | the operator console's own privileged actions (Genaryx) | `console_command` |
 | `heraldyx` | operator notification (mail out) | `alert_sent` (info) |
+| `scopyx` | web-egress enforcement (agents fetch through it) | `web_fetch` (low) · `web_blocked` (high) |
 
 The `console` row is Genaryx, the operator's own console: one `console_command`
 per privileged mutation it makes (kill a run, change a budget, decide an

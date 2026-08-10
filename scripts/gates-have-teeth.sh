@@ -220,7 +220,7 @@ cand = [k for k in d.get("properties", {}) if k not in req]
 assert cand, "every property is already required"
 req.append(cand[0])
 json.dump(d, open(p, "w"), indent=2)')" \
-	"is required in v0.2 and was not in v0.1"
+	"is required in the newer schema and was not in the older one"
 
 run_case "version-compatibility: a v0.1 field disappears from v0.2" fail \
 	'./scripts/version-compatibility.sh' \
@@ -232,7 +232,7 @@ shared = [k for k in old.get("properties", {}) if k in d.get("properties", {})]
 assert shared, "the two versions share no property"
 del d["properties"][shared[0]]
 json.dump(d, open(p, "w"), indent=2)')" \
-	"is gone from v0.2"
+	"exists in the older schema and is gone"
 
 # A field in the schema that the prose never mentions: an implementer reading
 # the SPEC builds without it, and the two halves of the contract disagree.
@@ -259,10 +259,16 @@ run_case "schema-matches-spec: prose that names something no schema declares" pa
 # maxLength where v0.1 had none, and the gate correctly called that a
 # narrowing, since v0.1 accepted everything above the new ceiling. Raising an
 # existing ceiling is the real widening.
-run_case "version-compatibility: v0.2 raises an existing ceiling" pass \
+# Raised on the NEWEST schema, and that detail is the case rather than an
+# accident of which file was handy. Raising it on a middle version makes the
+# version AFTER it look narrowed, so this case failed as OVEREAGER the day v0.3
+# arrived: the mutation was fine and the expectation had silently become a claim
+# about a two-version world. A widening is only a widening with respect to what
+# comes before it.
+run_case "version-compatibility: the newest schema raises an existing ceiling" pass \
 	'./scripts/version-compatibility.sh' \
 	"$(py 'import json
-p = "schemas/agent-event.v0.2.schema.json"
+p = "schemas/agent-event.v0.3.schema.json"
 d = json.load(open(p))
 sch = d["properties"]["agent_id"]
 assert "maxLength" in sch, "agent_id carries no maxLength to raise"

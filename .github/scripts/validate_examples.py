@@ -6,7 +6,7 @@ Checks, in order:
      valid JSON Schema (draft 2020-12).
   2. examples/passport.json validates against schemas/agent-passport.schema.json.
   3. Every line of examples/events.ndjson validates against the agent-event
-     schema matching its own "schema" field (v0.1 or v0.2).
+     schema matching its own "schema" field (v0.1, v0.2 or v0.3).
 
 Exits non-zero with a diagnostic on the first class of failure so CI fails
 loudly rather than silently drifting.
@@ -27,6 +27,7 @@ EXAMPLES = ROOT / "examples"
 EVENT_SCHEMA_BY_ID = {
     "taipanbox.dev/agent-event/v0.1": SCHEMAS / "agent-event.schema.json",
     "taipanbox.dev/agent-event/v0.2": SCHEMAS / "agent-event.v0.2.schema.json",
+    "taipanbox.dev/agent-event/v0.3": SCHEMAS / "agent-event.v0.3.schema.json",
 }
 
 

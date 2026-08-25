@@ -337,7 +337,16 @@ run_case "providers-match-registry: the registry parses to almost nothing" fail 
 	'./scripts/providers-match-registry.sh' \
 	"$(py 'import re
 s = open("SPEC.md").read()
-n = re.sub(r"^[|] .(groq|together|perplexity|replicate|openrouter|huggingface|ollama|bedrock). [|].*$\n", "", s, flags=re.M)
+kept = 0
+out = []
+for line in s.splitlines(keepends=True):
+    m = re.match(r"^[|] .([a-z0-9-]+). [|]", line)
+    if m and m.group(1) not in ("id",):
+        kept += 1
+        if kept > 2:
+            continue
+    out.append(line)
+n = "".join(out)
 assert n != s, "no registry rows to remove"
 open("SPEC.md", "w").write(n)')" \
 	"which cannot"

@@ -517,7 +517,7 @@ self-protection, not third-party or adversarial traffic.
 
 | `source` | `type` values |
 |---|---|
-| `tokenfuse` | `budget_exhausted` · `sustained_loop` · `spend_spike` · `fanout_explosion` · `breaker_tripped` (medium) · `dlp_block` · `taint_block` · `mcp_drift` · `identity_mismatch` (high) · `tool_call` (low) · `budget_threshold` (medium) · `run_killed` (high) · `unit_cap_exceeded` (high) · `policy_deny` (high) |
+| `tokenfuse` | `budget_exhausted` · `sustained_loop` · `spend_spike` · `fanout_explosion` · `breaker_tripped` (medium) · `dlp_block` · `taint_block` · `mcp_drift` · `identity_mismatch` (high) · `tool_call` (low) · `budget_threshold` (medium) · `run_killed` (high) · `unit_cap_exceeded` (high) · `policy_deny` (high) · `dependency_failed` (high) |
 | `engram` | `memory_written` · `reflection_run` · `contradiction_found` · `memory_forgotten` |
 | `idryx` | `identity_finding` (severity per finding) |
 | `qryx` | `crypto_finding` · `crypto_drift` · `policy_violation` · `evidence_signed` |
@@ -671,6 +671,62 @@ and inside the gateway by its own evaluator or a wasm module. A consumer that
 wants to know WHICH reads `source`, and one that only wants to know what
 happened does not have to learn two names for it.
 
+`dependency_failed` is the first type in this registry about the PRODUCER'S
+OWN dependency failing, rather than about an agent misbehaving or an agent
+being refused. Every other `tokenfuse` type above is one of those two kinds: a
+budget crossed, a loop detected, a call blocked, a claimed identity that did
+not match. This one says the gateway could not do its job, because something it
+depends on stopped answering. Until it existed, an upstream that died produced
+a 502 to the caller and nothing at all in this envelope, so the plane whose job
+is to record what happened to a run recorded a gap, and an operator reading the
+trail could not tell a dead dependency from an agent that went quiet.
+
+Read from `crates/gateway/src/proxy.rs`, where the failure paths are, and
+`crates/core/src/agent_event.rs`, which fixes the wire string and the severity,
+rather than from its docs. `data` carries four members. `dependency` is which
+of TokenFuse's own dependencies died: `provider`, the model API the gateway
+proxies to, or `policy_plane`, the evaluator it asks for a decision before the
+call. `stage` is how far the attempt had got, `send`, `stream`,
+`response_body` or `decide`. `effect` is what the failure did to the call, and
+it has its own paragraph below. `detail` is the transport error's own text,
+short and capped, and it is there for a person to read rather than for a
+consumer to parse: it is written by somebody else's client library and its
+wording is not a contract.
+
+**One type carrying the dependency in `data`, rather than one type per
+dependency, and the precedent is the `idryx` row above.** idryx registers one
+`identity_finding` and puts the detector name in `data.detector`, for the
+reason recorded there: 25 types would have meant 25 rows here, 25 severities
+beside them, 25 entries in every consumer's render catalogue, and a
+nine-repository spec change for each new detector, which is the tax that stops
+detectors being written. The same arithmetic holds here in miniature. Two
+dependencies can die today and a gateway acquires more of them over time, while
+a consumer wanting to route on "the producer lost something it needs" wants one
+name for that, with which thing it lost in `data`, where the next one costs
+nobody a spec change.
+
+**`effect` is the member a consumer must not skip**, because two of its three
+values are not outages at all. `call_failed` is the ordinary one: the call
+could not be made, or could not be completed. `allowed_ungoverned` means the
+policy plane could not be reached and the default failmode (open) let the call
+through, so the trail carries a call that nobody governed: it happened, it was
+paid for, and no policy decided it. `denied_unasked` is that same
+unreachability under `failmode=closed`, a call refused without anybody having
+decided it should be. A consumer that counts all three as ordinary failures is
+counting a governance gap as an outage, and the two go to different people: an
+outage goes to whoever owns the dependency, an ungoverned call goes to whoever
+owns the policy. The `scopyx` row above says the same thing about
+`enforcement`, and the mistake available here is the same one: two honest
+states that are not the same guarantee, counted as one.
+
+Severity is fixed per type in code rather than chosen at the emission site,
+which is why the row can state it, the same sentence the `scopyx` row above
+makes and for the same reason: a severity a call site can pick drifts between
+call sites, and every downstream count of "how many high events" then measures
+who wrote the call rather than what happened. It is `high` whichever `effect`
+the event carries, deliberately, because an ungoverned call is not a smaller
+fact than a failed one.
+
 The first four TokenFuse types are its existing incident taxonomy verbatim —
 zero renaming. New types may be added freely within a `source`; renames or
 semantic changes require a schema version bump. The `wardryx`, `verdryx`,
@@ -678,16 +734,30 @@ and `mockryx` rows are wave-2 additions introduced alongside schema v0.2
 (§6.4); the parenthesized value after each type is its typical `severity`,
 not a schema-enforced mapping.
 
-The last four TokenFuse types were added after this registry was first
-written, under the "added freely within a `source`" rule above, and are listed
-here so that a reader of this document sees what that producer actually emits:
-`identity_mismatch` (its identity gate), `tool_call` (its MCP broker's
-per-action audit signal), `budget_threshold` (a run crossing the configured
-fraction of its budget, which is the warning that precedes
-`budget_exhausted`), and `run_killed`. Their parenthesized severities are
-exact rather than typical: TokenFuse fixes the severity per type in code, so
-no emission site can choose one, and `budget_threshold` sits deliberately one
-band below the incident it warns about.
+Every TokenFuse type this registry did not carry when it was first written on
+2026-07-09 was added later, under the "added freely within a `source`" rule
+above, and each is glossed here so that a reader of this document sees what
+that producer actually emits: `identity_mismatch` (its identity gate),
+`tool_call` (its MCP broker's per-action audit signal), `budget_threshold` (a
+run crossing the configured fraction of its budget, which is the warning that
+precedes `budget_exhausted`), `run_killed`, `unit_cap_exceeded`, `policy_deny`
+(also a wardryx type, for the reason given above), and `dependency_failed`,
+which reports a different kind of fact from every other type on that row and
+has its own paragraphs above. Their parenthesized severities are exact rather
+than typical:
+TokenFuse fixes the severity per type in code, so no emission site can choose
+one, and `budget_threshold` sits deliberately one band below the incident it
+warns about.
+
+**This paragraph counted, and the count was wrong for three weeks.** It opened
+"The last four TokenFuse types" and named four, which was true when it was
+written on 2026-08-02 and stopped being true the next day: `unit_cap_exceeded`
+and `policy_deny` arrived on 2026-08-03, the row above grew by two, and nobody
+came back to the sentence that had counted it. That is the failure the `idryx`
+bullet names in as many words ("a number in this table ages separately from the
+thing it counts") and the one 6.4 records about itself, met a third time here.
+So the wording no longer carries a running total: the row above is where a
+reader counts, because the row is the half a gate reads.
 
 ### 6.3 The one concrete integration this buys
 

@@ -264,10 +264,11 @@ is meant to use. Each entry is
 ]
 ```
 
-- `provider` is a required, non-empty label (e.g. `anthropic`, `openai`,
-  `bedrock`, `google`, `mistral`, `cohere`). `model` and `endpoint` are
-  optional: `model` pins a specific model, `endpoint` names the API host the
-  agent is declared to reach.
+- `provider` is a required, non-empty label. It SHOULD be one of the ids
+  registered in 4.7 when one names the provider; it stays an open string, and
+  4.7 says what a consumer does with a value that is not registered. `model`
+  and `endpoint` are optional: `model` pins a specific model, `endpoint` names
+  the API host the agent is declared to reach.
 - Like `filesystem`, this is a *declaration of intent* for audit and
   inventory, not an enforced control. The passport format does not grant or
   restrict model access; it records what the agent's owner says the agent is
@@ -305,6 +306,78 @@ inside the existing free-form `labels` map for that purpose.
 - This is a *label convention*, not a schema change: `labels` remains
   exactly the free-form string map it always was, and a passport without
   `labels.version` is exactly as valid as one with it.
+
+### 4.7 Registered provider ids
+
+4.5 says a declaration exists so an auditor can compare it against two
+independent observations, a source scan and an egress sensor. That comparison
+is a comparison of strings, and until this subsection nothing said which
+strings. `provider` was "a required, non-empty label" with six examples beside
+it and no agreed spelling, so the three sides of the comparison spelled the
+same provider three ways and the disagreements a reader saw were mostly
+orthography.
+
+Measured across the estate on 2026-08-25, one provider, three planes:
+a source scan naming it `google`, an egress sensor naming it `Google Gemini`,
+and this document's own example naming it `google`. Set arithmetic over that
+produces a finding about Google being undeclared, on a passport that declares
+it.
+
+| id | names |
+|---|---|
+| `anthropic` | Anthropic's API |
+| `openai` | OpenAI's API |
+| `google` | Google's generative language API, including Gemini |
+| `bedrock` | Amazon Bedrock, whichever model it fronts |
+| `mistral` | Mistral AI's API |
+| `cohere` | Cohere's API |
+| `groq` | Groq's API |
+| `together` | Together AI's API |
+| `perplexity` | Perplexity's API |
+| `replicate` | Replicate's API |
+| `openrouter` | OpenRouter, which routes onward to a provider it chooses |
+| `huggingface` | Hugging Face's hosted inference |
+| `ollama` | Ollama, a model server the operator runs |
+
+**What this registry fixes is the spelling, and only the spelling.** It does
+not say any plane can currently detect the provider it names, and a row here is
+not a claim that one does. That distinction is the lesson 6.2 carries in the
+other direction: a registry that lists what a product MEANS to emit beside what
+it does emit is a registry nobody can act on. Here the subject is different, a
+label a human writes into a declaration, so the useful thing to agree is how it
+is written. What each plane recognises is a property of that plane's release
+and belongs in that plane's own documentation, where it can be re-measured.
+
+The rules:
+
+- A producer SHOULD use a registered id when one names the provider. An
+  unregistered provider is legal and stays legal: `provider` remains the open
+  string 4.5 and the schema declare, and a consumer MUST NOT reject a value
+  because it is not on this list.
+- Ids are lowercase, and use `[a-z0-9-]`. An unregistered value SHOULD be
+  written by the same rule, so that a provider registered later needs no
+  rewriting of the passports that already named it.
+- **A consumer comparing providers MUST lowercase both sides before comparing**,
+  and SHOULD do nothing else to them. Passports written before this subsection
+  carry whatever their author typed, `Anthropic` as readily as `anthropic`, and
+  a comparison that misses those reports drift where there is none. Anything
+  further, stripping punctuation, matching prefixes, folding an unregistered
+  value onto a registered one, is a guess that turns a spelling into an
+  assertion about which model an agent uses.
+- Ids are appended, never renamed. A rename would silently redefine what every
+  passport already carrying it declares, and unlike a schema field there is no
+  version stamp on this list to tell a reader which spelling they are holding.
+  A provider that renames itself gets a new id, and the old one stays as what it
+  always meant.
+- One id names one provider's API surface, not one model and not one endpoint.
+  Those are `model` and `endpoint`, which stay free-form: pinning a model is the
+  operator's business and the set moves weekly.
+
+`openrouter` is the row worth reading twice. It is a registered provider
+because that is where the operator's bytes go, which is the question an
+inventory asks, and it is also the one row where a registered id does not tell
+a reader which model ran the prompt. A consumer MUST NOT infer an onward
+provider from it.
 
 ## 5. Delegation chain
 

@@ -246,7 +246,39 @@ json.dump(d, open(p, "w"), indent=2)')" \
 	"SPEC.md never"
 
 echo
+run_case "providers-match-registry: an example passport spells a provider its own way" fail \
+	'./scripts/providers-match-registry.sh' \
+	"$(py 'edit("examples/passport.json", "\"provider\": \"anthropic\"", "\"provider\": \"Anthropic\"")')" \
+	"which SPEC 4.7 does not register"
+
+run_case "providers-match-registry: SPEC 4.5's own example names an unregistered provider" fail \
+	'./scripts/providers-match-registry.sh' \
+	"$(py 'edit("SPEC.md", "{ \"provider\": \"anthropic\", \"model\": \"claude-sonnet-4-5\"", "{ \"provider\": \"claude\", \"model\": \"claude-sonnet-4-5\"")')" \
+	"SPEC 4.5's own example declares provider"
+
+# The schema's description listed six providers by name until 4.7 existed. That
+# is the second copy this gate is really for: nobody edits a schema description
+# when a registry gains a row.
+run_case "providers-match-registry: the schema description lists ids again" fail \
+	'./scripts/providers-match-registry.sh' \
+	"$(py 'edit("schemas/agent-passport.schema.json", "LLM provider label. SHOULD", "LLM provider label, e.g. anthropic. SHOULD")')" \
+	"second copy of the registry"
+
 echo "=== and what they must NOT catch ==="
+
+# An unregistered provider in free prose is not a fault. The field is an open
+# string by design, this repo discusses providers it does not register, and a
+# gate that fired here would be asking the spec to stop naming things.
+run_case "providers-match-registry: prose naming an unregistered provider" pass \
+	'./scripts/providers-match-registry.sh' \
+	"$(py 'edit("SPEC.md", "### 4.7 Registered provider ids\n", "### 4.7 Registered provider ids\n\nAn operator running deepseek writes that label and is not refused.\n")')"
+
+# A row appended to the registry is the ordinary way this list grows, and the
+# only way: 4.7 says ids are appended, never renamed.
+run_case "providers-match-registry: a provider appended to the registry" pass \
+	'./scripts/providers-match-registry.sh' \
+	"$(py 'edit("SPEC.md", "| `ollama` | Ollama, a model server the operator runs |", "| `ollama` | Ollama, a model server the operator runs |\n| `deepseek` | DeepSeek API |")')"
+
 
 # The gate is deliberately one-directional: prose without a schema field is
 # allowed, because free prose is most of a specification.
@@ -295,6 +327,35 @@ for f in glob.glob("schemas/*.json"):
     subprocess.run(["git", "mv", f, f + ".disabled"], check=True)
     n += 1
 assert n, "no schemas in this repo"')"
+
+run_case "providers-match-registry: SPEC 4.7 loses its heading" fail \
+	'./scripts/providers-match-registry.sh' \
+	"$(py 'edit("SPEC.md", "### 4.7 Registered provider ids", "### 4.9 Registered provider ids")')" \
+	"has no '### 4.7' heading"
+
+run_case "providers-match-registry: the registry parses to almost nothing" fail \
+	'./scripts/providers-match-registry.sh' \
+	"$(py 'import re
+s = open("SPEC.md").read()
+n = re.sub(r"^[|] .(groq|together|perplexity|replicate|openrouter|huggingface|ollama|bedrock). [|].*$\n", "", s, flags=re.M)
+assert n != s, "no registry rows to remove"
+open("SPEC.md", "w").write(n)')" \
+	"which cannot"
+
+# Renaming the key through json rather than through a text pattern, because the
+# pattern needs a quote inside a quote inside a shell string, and the first two
+# attempts at that produced a mutation that changed no bytes. This harness
+# caught both and called them BROKEN, which is the one thing it must never let
+# pass as a gate that worked.
+run_case "providers-match-registry: the schema stops declaring provider" fail \
+	'./scripts/providers-match-registry.sh' \
+	"$(py 'import json
+p = "schemas/agent-passport.schema.json"
+d = json.load(open(p))
+props = d["properties"]["models"]["items"]["properties"]
+props["providerx"] = props.pop("provider")
+json.dump(d, open(p, "w"), indent=2)')" \
+	"declares no models"
 
 run_case "schema-matches-spec: no schemas left to read" fail \
 	'./scripts/schema-matches-spec.sh' \

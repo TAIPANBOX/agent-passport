@@ -59,6 +59,7 @@ python .github/scripts/validate_examples.py
 ./scripts/schema-matches-spec.sh
 ./scripts/version-compatibility.sh
 ./scripts/artifacts-match-registry.sh
+./scripts/providers-match-registry.sh
 ./scripts/gates-have-teeth.sh     # invariant 8; needs a clean tree and jsonschema
 ```
 
@@ -135,6 +136,37 @@ an absent invariant.
    table, the `<text>` nodes of the SVGs and the flowchart's arrows into the
    bus against it. Free prose is deliberately out of scope. See below.)*
 
+9. **Nothing in this repo names a model provider in a spelling the 4.7 registry
+   does not carry.** 4.5 promises a comparison between what an agent declares
+   and what two independent observations see, and that comparison is a
+   comparison of strings. Until 4.7 nothing said which strings, so the same
+   provider was `google` in a source scan, `Google Gemini` in an egress sensor
+   and `google` here, and set arithmetic over the three reported drift that was
+   orthography.
+
+   **The registry is prose and not a schema enum, and that is forced rather
+   than chosen.** `provider` is `type: string, minLength: 1`, and invariant 5
+   says each version widens the one before it: an enum would narrow the field
+   and refuse every passport naming a provider nobody here thought of. So the
+   field stays open, an unregistered value stays legal, and a consumer MUST NOT
+   reject one. What the registry fixes is the spelling, and only the spelling.
+   It does not claim any plane can detect the provider a row names, which is
+   invariant 7's lesson read in the other direction.
+
+   The rule a consumer carries is one line and it is load-bearing: lowercase
+   both sides before comparing, and do nothing else. Passports written before
+   4.7 carry whatever their author typed. Anything cleverer, stripping
+   punctuation or folding an unregistered value onto a registered one, turns a
+   spelling into an assertion about which model an agent uses.
+   *(gate: `scripts/providers-match-registry.sh`, which reads 4.7 as the source
+   of truth and measures every `models[].provider` in `examples/*.json`, 4.5's
+   own inline example, and the schema's description of the field, which listed
+   six providers by hand until this registry existed. Its limits are declared
+   in the file: it says nothing about a passport outside this repo, cannot tell
+   a correctly spelled wrong provider from a right one, and does not read free
+   prose. Eight cases in `scripts/gates-have-teeth.sh`: three faults, two
+   non-faults it must not catch, and three subjects taken away.)*
+
 8. **A check must be able to tell "did not fail" from "did not run", and every
    gate here has been made to fail on purpose to prove it can.** The three
    script gates already refuse when their subject is absent, in five distinct
@@ -157,15 +189,15 @@ an absent invariant.
    not the change this file's escalation rule is about: nothing is committed,
    the tree is asserted clean before the run reports success, and a run that
    left residue fails instead. A spec change is still a decision for the user.
-   *(gate: `scripts/gates-have-teeth.sh`, 11 cases: seven real faults each gate
-   must catch, two non-faults they must not, and two subjects taken away
+   *(gate: `scripts/gates-have-teeth.sh`, 19 cases: ten real faults each gate
+   must catch, four non-faults they must not, and five subjects taken away
    entirely. The non-faults are the ones worth keeping: prose that names
    something no schema declares is deliberately allowed by invariant 2's
    half-surface, and a raised ceiling is the widening 6.4 promises.)*
 
    **What it does not cover.** It cannot test itself. It proves each gate
    catches the faults named in it, not every fault of that kind. It found no
-   hole in any of the four checks.
+   hole in any of the five checks.
 
    Writing it did find one in ITSELF, and it is the failure mode this whole
    harness exists for. A case asserted the validator fails saying `ts`, and it
@@ -178,7 +210,8 @@ an absent invariant.
 
 This list is debt, and it is here to stay visible rather than to be tidy.
 
-**Held by this file alone: invariants 1 and 6.**
+**Held by this file alone: invariants 1 and 6.** Invariant 9 is
+`scripts/providers-match-registry.sh`.
 
 Invariant 2 is now half held by `scripts/schema-matches-spec.sh`, which walks
 every property declared anywhere in `schemas/*.json`, including nested ones and

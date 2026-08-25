@@ -338,6 +338,8 @@ it.
 | `openrouter` | OpenRouter, which routes onward to a provider it chooses |
 | `huggingface` | Hugging Face's hosted inference |
 | `ollama` | Ollama, a model server the operator runs |
+| `azure-openai` | Azure OpenAI and Azure AI Foundry |
+| `vertex` | Google Cloud Vertex AI |
 
 **What this registry fixes is the spelling, and only the spelling.** It does
 not say any plane can currently detect the provider it names, and a row here is
@@ -372,6 +374,20 @@ The rules:
 - One id names one provider's API surface, not one model and not one endpoint.
   Those are `model` and `endpoint`, which stay free-form: pinning a model is the
   operator's business and the set moves weekly.
+
+**`azure-openai` is not `openai`, and `vertex` is not `google`, for the reason
+`bedrock` is its own row rather than a model name.** An id names the API
+surface an agent's bytes leave for, and that is what an inventory is asking.
+The same model, reached through Azure, goes to Microsoft under a Microsoft
+contract, in a region and under a data-residency arrangement the operator
+chose; reached through Vertex it goes to Google Cloud rather than to the
+generative language API. Folding either onto the provider whose model it
+happens to be would put one name on two different answers to "where does our
+data go", which is the question the field exists for.
+
+The corollary is a producer's, and it is not always answerable from a
+dependency list: an agent using the `openai` package against an Azure endpoint
+declares `azure-openai`, because the package is not the destination.
 
 `openrouter` is the row worth reading twice. It is a registered provider
 because that is where the operator's bytes go, which is the question an

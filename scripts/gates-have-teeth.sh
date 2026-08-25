@@ -337,14 +337,24 @@ run_case "providers-match-registry: the registry parses to almost nothing" fail 
 	'./scripts/providers-match-registry.sh' \
 	"$(py 'import re
 s = open("SPEC.md").read()
-n = re.sub(r"\\| \\`(groq|together|perplexity|replicate|openrouter|huggingface|ollama|bedrock)\\` \\|[^\\n]*\\n", "", s)
+n = re.sub(r"^[|] .(groq|together|perplexity|replicate|openrouter|huggingface|ollama|bedrock). [|].*$\n", "", s, flags=re.M)
 assert n != s, "no registry rows to remove"
 open("SPEC.md", "w").write(n)')" \
 	"which cannot"
 
+# Renaming the key through json rather than through a text pattern, because the
+# pattern needs a quote inside a quote inside a shell string, and the first two
+# attempts at that produced a mutation that changed no bytes. This harness
+# caught both and called them BROKEN, which is the one thing it must never let
+# pass as a gate that worked.
 run_case "providers-match-registry: the schema stops declaring provider" fail \
 	'./scripts/providers-match-registry.sh' \
-	"$(py 'edit("schemas/agent-passport.schema.json", "\\"provider\\": {", "\\"providerx\\": {")')" \
+	"$(py 'import json
+p = "schemas/agent-passport.schema.json"
+d = json.load(open(p))
+props = d["properties"]["models"]["items"]["properties"]
+props["providerx"] = props.pop("provider")
+json.dump(d, open(p, "w"), indent=2)')" \
 	"declares no models"
 
 run_case "schema-matches-spec: no schemas left to read" fail \

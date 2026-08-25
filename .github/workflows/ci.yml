@@ -29,6 +29,8 @@ jobs:
         run: ./scripts/version-compatibility.sh
       - name: artifacts match the SPEC 6.2 registry
         run: ./scripts/artifacts-match-registry.sh
+      - name: providers match the SPEC 4.7 registry
+        run: ./scripts/providers-match-registry.sh
 
       # Last, because it mutates tracked files, including schemas/ and SPEC.md,
       # and restores them. Nothing is committed and the tree is asserted clean

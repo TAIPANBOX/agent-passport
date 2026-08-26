@@ -43,7 +43,7 @@
       "properties": {
         "method": {
           "type": "string",
-          "enum": ["none", "oidc", "spiffe-svid", "enclave-key", "mtls-cert"]
+          "enum": ["none", "oidc", "spiffe-svid", "enclave-key", "mtls-cert", "dpop-key"]
         },
         "detail": {
           "type": "string",

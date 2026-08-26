@@ -270,7 +270,7 @@ Registered sources today:
 
 | `source` | Product | `type` values |
 |---|---|---|
-| `tokenfuse` | spend governance | `budget_exhausted` · `sustained_loop` · `spend_spike` · `fanout_explosion` · `breaker_tripped` (medium) · `dlp_block` · `taint_block` · `mcp_drift` · `identity_mismatch` (high) · `tool_call` (low) · `budget_threshold` (medium) · `run_killed` (high) · `unit_cap_exceeded` (high) · `policy_deny` (high) · `dependency_failed` (high) · `taint_shadow` (medium) · `taint_raised` (low) |
+| `tokenfuse` | spend governance | `budget_exhausted` · `sustained_loop` · `spend_spike` · `fanout_explosion` · `breaker_tripped` (medium) · `dlp_block` · `taint_block` · `mcp_drift` · `identity_mismatch` (high) · `tool_call` (low) · `budget_threshold` (medium) · `run_killed` (high) · `unit_cap_exceeded` (high) · `policy_deny` (high) · `dependency_failed` (high) · `taint_shadow` (medium) · `taint_raised` (low) · `taint_cleared` (high) |
 | `engram` | memory governance | `memory_written` · `reflection_run` · `contradiction_found` · `memory_forgotten` |
 | `idryx` | identity and access governance | `identity_finding` (severity per finding) |
 | `qryx` | cryptographic evidence | `crypto_finding` · `crypto_drift` · `policy_violation` · `evidence_signed` |

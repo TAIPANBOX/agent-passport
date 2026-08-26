@@ -517,7 +517,7 @@ self-protection, not third-party or adversarial traffic.
 
 | `source` | `type` values |
 |---|---|
-| `tokenfuse` | `budget_exhausted` · `sustained_loop` · `spend_spike` · `fanout_explosion` · `breaker_tripped` (medium) · `dlp_block` · `taint_block` · `mcp_drift` · `identity_mismatch` (high) · `tool_call` (low) · `budget_threshold` (medium) · `run_killed` (high) · `unit_cap_exceeded` (high) · `policy_deny` (high) · `dependency_failed` (high) · `taint_shadow` (medium) · `taint_raised` (low) |
+| `tokenfuse` | `budget_exhausted` · `sustained_loop` · `spend_spike` · `fanout_explosion` · `breaker_tripped` (medium) · `dlp_block` · `taint_block` · `mcp_drift` · `identity_mismatch` (high) · `tool_call` (low) · `budget_threshold` (medium) · `run_killed` (high) · `unit_cap_exceeded` (high) · `policy_deny` (high) · `dependency_failed` (high) · `taint_shadow` (medium) · `taint_raised` (low) · `taint_cleared` (high) |
 | `engram` | `memory_written` · `reflection_run` · `contradiction_found` · `memory_forgotten` |
 | `idryx` | `identity_finding` (severity per finding) |
 | `qryx` | `crypto_finding` · `crypto_drift` · `policy_violation` · `evidence_signed` |
@@ -775,6 +775,37 @@ severity chosen at the emission site, which §6.2 forbids everywhere: it is two
 types, fixed at `medium` and `high`, for two facts that genuinely differ in
 what happened. Naming them one type would have forced one band on both, and
 whichever band was picked would have been wrong for the other half.
+
+`taint_cleared` is the first type in this registry that records a control being
+LIFTED rather than applied, and the band is the whole of it.
+
+Every other type here is something happening or something being refused.
+This one is a human deciding that a refusal no longer applies: TokenFuse's
+agent firewall is monotonic, so a taint label lasts the life of a run, and
+docs/07 B.4 gate 1 is the only way one comes off. It carries
+`{labels, actor, reason, authenticated, still_inherited}`.
+
+**`high`, the same band as `taint_block`**, and a consumer that filed it lower
+would have the estate's weights backwards. This is the single event where a
+guarantee is deliberately suspended for a run. An estate that pages when a rule
+fires and stays quiet when somebody switches it off is telling its operator that
+enforcement matters and exemption does not. It is rare by construction, so the
+band costs nothing in noise.
+
+**`actor` is a person and `agent_id` is not.** The subject is the run's AGENT,
+required and never invented, because §6.1 forbids inventing one and an emitter
+that omitted it would produce a clearance that was applied and never recorded.
+Who did it travels in `data.actor` as a `user://` principal, which is the
+payload plane's side of the line §6.1 draws: `agent_id` is the field this
+envelope promises holds no natural person, and a human's identifier belongs
+where erasure can reach it.
+
+**`authenticated` is a real field with two values.** It says whether the caller
+presented a credential or was trusted by network placement, and a consumer
+auditing a clearance needs to tell those apart. A field that was always true
+would be worth nothing, which is the same argument §6.2 makes about
+`scopyx`'s `enforcement` and `dependency_failed`'s `effect`: two honest states
+that are not the same guarantee, and counting them as one loses the difference.
 
 `slo_burn` is the first type in this registry that reports a STANDING
 QUANTITY rather than an occurrence. Every type above says that a thing

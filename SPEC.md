@@ -517,7 +517,7 @@ self-protection, not third-party or adversarial traffic.
 
 | `source` | `type` values |
 |---|---|
-| `tokenfuse` | `budget_exhausted` · `sustained_loop` · `spend_spike` · `fanout_explosion` · `breaker_tripped` (medium) · `dlp_block` · `taint_block` · `mcp_drift` · `identity_mismatch` (high) · `tool_call` (low) · `budget_threshold` (medium) · `run_killed` (high) · `unit_cap_exceeded` (high) · `policy_deny` (high) · `dependency_failed` (high) |
+| `tokenfuse` | `budget_exhausted` · `sustained_loop` · `spend_spike` · `fanout_explosion` · `breaker_tripped` (medium) · `dlp_block` · `taint_block` · `mcp_drift` · `identity_mismatch` (high) · `tool_call` (low) · `budget_threshold` (medium) · `run_killed` (high) · `unit_cap_exceeded` (high) · `policy_deny` (high) · `dependency_failed` (high) · `taint_shadow` (medium) · `taint_raised` (low) |
 | `engram` | `memory_written` · `reflection_run` · `contradiction_found` · `memory_forgotten` |
 | `idryx` | `identity_finding` (severity per finding) |
 | `qryx` | `crypto_finding` · `crypto_drift` · `policy_violation` · `evidence_signed` |
@@ -726,6 +726,55 @@ call sites, and every downstream count of "how many high events" then measures
 who wrote the call rather than what happened. It is `high` whichever `effect`
 the event carries, deliberately, because an ungoverned call is not a smaller
 fact than a failed one.
+
+`taint_shadow` and `taint_raised` are the first pair in this registry where
+one type exists because the OTHER one is not the whole story. `taint_block`
+has been here since the beginning and says an action was refused. It was, on
+its own, unreadable in two directions.
+
+**Backwards, `taint_raised` (low).** TokenFuse's agent firewall tracks taint
+monotonically across a run: once the context has touched the web, an upload or
+an unknown tool, the label is carried for the life of that run. So by the time
+anything is refused, the tool that carried the label in is many calls back,
+and until 2026-08-26 it was recorded nowhere. A consumer reading "refused,
+context was [web, file]" had the verdict and no way at all to reach its cause.
+`taint_raised` is that cause: `data` carries `added` (only labels NEW to the
+run, so a run reading the web on forty turns writes once), `from_tools` naming
+which tools carried them, `stage`, and `carrying`, the full set afterwards so a
+reader walking a run forward never re-derives the running total. `low`, the
+same band as `tool_call` and for the same reason: a run reading the web is
+normal, and only what it does next may not be.
+
+**Forwards, `taint_shadow` (medium).** The firewall has three modes and its
+documented on-ramp is `shadow`, where a rule that WOULD refuse does not.
+Before this type, that produced a response header and no event, so the only
+party told that a dangerous action had been permitted was the agent that had
+just been talked into it, and a week of shadow left a consumer with nothing to
+count. The band is the whole judgement and it is worth stating what it is not.
+Not `low`: in shadow the action is PERMITTED, the answer carrying it reaches
+the client and the client executes it, so this is a thing that HAPPENED rather
+than a refusal that worked. Not `high`, which is `taint_block`'s band: a
+consumer paging on a shadow week at the same weight as a real refusal pages
+its operator during precisely the week they were told to watch quietly, and an
+operator who mutes the sender in week one never reaches week two. `medium`
+clears heraldyx's and stack-up's floors, so it is not silence either.
+
+**They share one `data` shape with `taint_block`**, and that is deliberate
+rather than lazy: `stage`, `mode`, `rule`, `labels`, `requested`, `denied`,
+`tools`. A consumer counting rule hits should be able to read a shadow week and
+an enforced week with one code path, which is also what makes the comparison
+between them arithmetic instead of a migration. `mode` is on the event even
+though the type implies it, so a consumer joining the two families into one
+count does not have to know that mapping. `denied` says which capability was
+refused; `tools` says which tool the model asked for by name, and that is the
+member that makes a row actionable rather than merely true.
+
+This is also the first place in this registry where a `medium` type reports
+something a stricter configuration would have made `high`. That is not a
+severity chosen at the emission site, which §6.2 forbids everywhere: it is two
+types, fixed at `medium` and `high`, for two facts that genuinely differ in
+what happened. Naming them one type would have forced one band on both, and
+whichever band was picked would have been wrong for the other half.
 
 `slo_burn` is the first type in this registry that reports a STANDING
 QUANTITY rather than an occurrence. Every type above says that a thing

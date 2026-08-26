@@ -217,10 +217,21 @@ The agent that provisions/spawns this one, if any — a *static* relationship
 
 ### 4.3 `attestation.method`
 
-One of: `none` · `oidc` · `spiffe-svid` · `enclave-key` · `mtls-cert`.
+One of: `none` · `oidc` · `spiffe-svid` · `enclave-key` · `mtls-cert` ·
+`dpop-key`.
 Records how the org binds the name to a workload. `none` is legal and
 honest (most orgs today); the field exists so the posture is *visible* —
 Idryx SHOULD surface `attestation: none` on privileged agents as a finding.
+
+`dpop-key` (added 2026-08-26) means the workload proves possession of a key on
+every request, per RFC 9449, and the key's RFC 7638 thumbprint is what a
+delegation is bound to (§5.2). It is the same family as `mtls-cert` and
+`enclave-key`: the workload holds something, and holding it is the binding.
+
+It is deliberately NOT called after any product. An attestation method names a
+MECHANISM an org can implement with whatever it likes; a value named after a
+service would make this registry a list of vendors, and the next
+implementation would have to either lie about which one it is or add a row.
 
 ### 4.4 `filesystem`
 
@@ -420,6 +431,91 @@ hop is not enough. The chain is an **ordered list, root first**:
 
 This is the piece nobody else has: *"who acted on behalf of whom, N levels
 deep, reconstructable at audit time."*
+
+### 5.2 Proving a chain (optional, additive)
+
+§2 says this format names an agent and does not prove possession, and §5 above
+records who acted for whom without saying when or on whose authority. Both stay
+true. This section says how a consumer that HAS a proof records the fact,
+without putting the proof itself anywhere it does not belong.
+
+**A proven chain carries `delegation_proof` beside `on_behalf_of`:**
+
+```json
+"on_behalf_of": [
+  "user://acme-bank.example/j.doe",
+  "agent://acme-bank.example/support/orchestrator"
+],
+"delegation_proof": {
+  "jti": "SGVsbG8gdGhlcmU",
+  "jkt": "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs",
+  "iss": "https://vouchryx.acme-bank.example",
+  "exp": 1787836800
+}
+```
+
+- `jti` and `iss` identify the token that proved the chain, so an auditor can
+  find it in the issuer's own record and check it against a revocation list.
+- `jkt` is the RFC 7638 thumbprint the token was bound to: the answer to "who
+  was holding this", which a chain of names cannot give.
+- `exp` is when the proof stopped being one. §2's second disclaimer says the
+  chain carries no freshness; this is the freshness, and it belongs to the
+  PROOF rather than to the chain.
+
+**The token itself MUST NOT appear.** A delegation token is a live credential:
+anything that can present it can act as that chain until it expires. An event
+stream is a record, it is replicated, it is read by consumers that are not
+enforcement points, and in this estate it is hash-chained so nothing can be
+quietly removed from it later. A field carrying the token would put a working
+credential in every one of those places at once. What is recorded is enough to
+FIND the proof and check it, and not enough to use it.
+
+**A sibling field is correct here, and §3.3 forbids one for the opposite
+case.** That section refuses to carry a trust marker in a sibling field,
+because consumers MUST ignore fields they do not model, so an old consumer
+would read an unproven subject as an established one: ignoring the marker is
+UNSAFE. The direction reverses for a proof. An old consumer that ignores
+`delegation_proof` simply does not get the upgrade and keeps treating the chain
+as unproven, which is a safe refusal. That asymmetry, and not convenience, is
+why one is in-band (`claimed:`) and the other is not.
+
+- Absent `delegation_proof` means **not proven**, never "proven elsewhere". A
+  consumer MUST NOT infer proof from anything else on the event.
+- A consumer that models it MUST NOT accept a chain as proven on the strength
+  of this field alone: the field records that a proof existed, and verifying
+  one is a separate act against the issuer's keys.
+- **A proven chain MUST NOT be forwarded as an unproven one.** §5 already
+  forbids truncating the chain; this forbids the quieter version, where a
+  product that received `delegation_proof` drops it and passes the names on. A
+  downgrade leaves every name intact and is invisible in the chain itself,
+  which is what makes it worth a MUST.
+
+### 5.3 The RFC 8693 mapping, which is not a reversal
+
+Where a delegation is proved by an RFC 8693 token, the token's `act` claim and
+this chain are related and are NOT the same list in a different order. Getting
+this wrong produces a token that verifies perfectly and asserts the opposite of
+what happened, which no signature check can catch.
+
+- RFC 8693 §4.1 nests `act` **current-first**: the outermost `act` is the
+  immediate actor, and nesting goes back in time.
+- §5 above orders `on_behalf_of` **root-first**: the first entry is the root.
+- RFC 8693 keeps the subject **out** of `act`, because the subject is who the
+  token is FOR and is not an actor. §5 puts the root **into** the chain.
+
+So the mapping is `on_behalf_of = [sub] + reverse(act)`: a list and a
+list-plus-its-head, not a reversal.
+
+```
+  token:  sub = user://acme/alice
+          act = {runbook, act:{triage}}
+
+  chain:  ["user://acme/alice", "agent://acme/triage", "agent://acme/runbook"]
+```
+
+Both halves of that were found by running the mapping rather than by reading
+either document: reversing without prepending the subject writes a delegation
+chain **with the human missing from it**, and every token still verifies.
 
 ### 5.1 Cycle safety (normative)
 

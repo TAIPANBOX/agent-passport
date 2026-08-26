@@ -15,12 +15,15 @@
 #
 # WHY THE THIRD PROPERTY IS SEPARATE FROM THE FIRST
 #
-# All three script gates here already refuse when their subject is absent, and they
-# say so in five distinct ways: no schemas found, jsonschema unavailable, the
-# 6.2 heading gone, the registry table header gone, a registry that parsed to
-# too few sources. Every one of those sentences was true, every one was
-# established by hand once in the session that wrote the script, and nothing
-# re-ran them.
+# Every script gate here already refuses when its subject is absent, and they
+# say so in their own words: no schemas found, jsonschema unavailable, a
+# registry heading gone, a registry table header gone, a registry that parsed to
+# too few rows, the governed field gone from the schema, the example that was to
+# be measured carrying nothing. Every one of those sentences was true, every one
+# was established by hand once in the session that wrote the script, and nothing
+# re-ran them. The list no longer counts itself: it said "three script gates,
+# five distinct ways" for as long as there were four gates and more ways, which
+# is SPEC 6.2's lesson about a total in prose, met here.
 #
 # This repository is the contract the rest of the estate implements, so a gate
 # here that quietly stops comparing does not break this repo at all. It breaks
@@ -264,6 +267,34 @@ run_case "providers-match-registry: the schema description lists ids again" fail
 	"$(py 'edit("schemas/agent-passport.schema.json", "LLM provider label. SHOULD", "LLM provider label, e.g. anthropic. SHOULD")')" \
 	"second copy of the registry"
 
+echo
+run_case "runtimes-match-registry: an example passport spells a runtime its own way" fail \
+	'./scripts/runtimes-match-registry.sh' \
+	"$(py 'edit("examples/passport.json", "\"runtime\": \"langgraph\"", "\"runtime\": \"LangGraph\"")')" \
+	"which SPEC 4.8 does not register"
+
+# The trailing comma is what makes this pattern unique: 4.8 quotes the same
+# declaration in its opening paragraph, without one.
+run_case "runtimes-match-registry: SPEC section 4's own example names an unregistered runtime" fail \
+	'./scripts/runtimes-match-registry.sh' \
+	"$(py 'edit("SPEC.md", "\"runtime\": \"langgraph\",", "\"runtime\": \"our-own-loop\",")')" \
+	"SPEC section 4's own example declares runtime"
+
+# The schema description read "e.g. langgraph" until 4.8 existed. That is the
+# second copy this gate is really for, and it was live on main when the gate
+# was written: nobody edits a schema description when a registry moves.
+run_case "runtimes-match-registry: the schema description lists ids again" fail \
+	'./scripts/runtimes-match-registry.sh' \
+	"$(py 'edit("schemas/agent-passport.schema.json", "control loop. SHOULD", "control loop, e.g. langgraph. SHOULD")')" \
+	"second copy of the registry"
+
+# And the same copy one file further out, in the table most readers reach
+# before either the schema or the spec. Also live on main.
+run_case "runtimes-match-registry: README's field table lists ids again" fail \
+	'./scripts/runtimes-match-registry.sh' \
+	"$(py 'edit("README.md", "control loop; a declaration", "control loop, e.g. langgraph; a declaration")')" \
+	"second copy of the registry"
+
 echo "=== and what they must NOT catch ==="
 
 # An unregistered provider in free prose is not a fault. The field is an open
@@ -278,6 +309,17 @@ run_case "providers-match-registry: prose naming an unregistered provider" pass 
 run_case "providers-match-registry: a provider appended to the registry" pass \
 	'./scripts/providers-match-registry.sh' \
 	"$(py 'edit("SPEC.md", "| `ollama` | Ollama, a model server the operator runs |", "| `ollama` | Ollama, a model server the operator runs |\n| `deepseek` | DeepSeek API |")')"
+
+# Same two non-faults one registry over. An unregistered framework in prose is
+# not a fault: 4.8 argues at length that the field stays open, so a gate firing
+# here would be asking the spec to stop describing the case it exists for.
+run_case "runtimes-match-registry: prose naming an unregistered runtime" pass \
+	'./scripts/runtimes-match-registry.sh' \
+	"$(py 'edit("SPEC.md", "### 4.8 `runtime`, and the registered runtime ids\n", "### 4.8 `runtime`, and the registered runtime ids\n\nAn operator running smolagents writes that label and is not refused.\n")')"
+
+run_case "runtimes-match-registry: a runtime appended to the registry" pass \
+	'./scripts/runtimes-match-registry.sh' \
+	"$(py 'edit("SPEC.md", "| `microsoft-agent-framework` | Microsoft Agent Framework, which converges Semantic Kernel and AutoGen |", "| `microsoft-agent-framework` | Microsoft Agent Framework, which converges Semantic Kernel and AutoGen |\n| `llamaindex` | LlamaIndex |")')"
 
 
 # The gate is deliberately one-directional: prose without a schema field is
@@ -365,6 +407,55 @@ props = d["properties"]["models"]["items"]["properties"]
 props["providerx"] = props.pop("provider")
 json.dump(d, open(p, "w"), indent=2)')" \
 	"declares no models"
+
+run_case "runtimes-match-registry: SPEC 4.8 loses its heading" fail \
+	'./scripts/runtimes-match-registry.sh' \
+	"$(py 'edit("SPEC.md", "### 4.8 `runtime`", "### 4.10 `runtime`")')" \
+	"has no '### 4.8' heading"
+
+run_case "runtimes-match-registry: the registry parses to almost nothing" fail \
+	'./scripts/runtimes-match-registry.sh' \
+	"$(py 'import re
+s = open("SPEC.md").read()
+kept = 0
+out = []
+for line in s.splitlines(keepends=True):
+    m = re.match(r"^[|] .([a-z0-9-]+). [|]", line)
+    if m and m.group(1) not in ("id",):
+        kept += 1
+        if kept > 2:
+            continue
+    out.append(line)
+n = "".join(out)
+assert n != s, "no registry rows to remove"
+open("SPEC.md", "w").write(n)')" \
+	"which cannot"
+
+run_case "runtimes-match-registry: the schema stops declaring runtime" fail \
+	'./scripts/runtimes-match-registry.sh' \
+	"$(py 'import json
+p = "schemas/agent-passport.schema.json"
+d = json.load(open(p))
+props = d["properties"]
+props["runtimex"] = props.pop("runtime")
+json.dump(d, open(p, "w"), indent=2)')" \
+	"declares no top-level"
+
+# The subject that is easiest to lose without noticing: the field is optional,
+# so an example dropping it stays valid, keeps validating, and quietly takes
+# away the documents this gate measures.
+run_case "runtimes-match-registry: no example declares a runtime at all" fail \
+	'./scripts/runtimes-match-registry.sh' \
+	"$(py 'import json, pathlib
+n = 0
+for p in sorted(pathlib.Path("examples").glob("*.json")):
+    d = json.loads(p.read_text())
+    if isinstance(d.get("runtime"), str):
+        del d["runtime"]
+        p.write_text(json.dumps(d, indent=2) + "\n")
+        n += 1
+assert n, "no example declared a runtime to remove"')" \
+	"measured nothing about them"
 
 run_case "schema-matches-spec: no schemas left to read" fail \
 	'./scripts/schema-matches-spec.sh' \

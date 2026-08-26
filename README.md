@@ -214,7 +214,7 @@ depends on fetching it. Schema:
 | `id` | yes | canonical `agent://` identifier |
 | `owner` | yes | human or team principal (email or group); the auditor's first question, "whose agent is this?" |
 | `display_name` | no | human-readable name |
-| `runtime` | no | free-form label for the agent runtime/framework, e.g. `langgraph` |
+| `runtime` | no | the framework that drives the agent's control loop; a declaration for audit and inventory, not an enforced control. Ids are registered in SPEC.md §4.8 and an unregistered value stays legal |
 | `parent` | no | static provisioning parent agent ID, distinct from the dynamic `on_behalf_of` chain |
 | `attestation.method` | no | one of `none` · `oidc` · `spiffe-svid` · `enclave-key` · `mtls-cert`; `none` is legal and honest, the field exists so the posture is visible |
 | `attestation.detail` | no | method-specific reference, e.g. a SPIFFE ID or issuer URL |

@@ -295,7 +295,48 @@ run_case "runtimes-match-registry: README's field table lists ids again" fail \
 	"$(py 'edit("README.md", "control loop; a declaration", "control loop, e.g. langgraph; a declaration")')" \
 	"second copy of the registry"
 
+run_case "attestation-methods-agree: README's row is short a method" fail \
+	'./scripts/attestation-methods-agree.sh' \
+	"$(py 'edit("README.md", "`mtls-cert` · `dpop-key`;", "`mtls-cert`;")')" \
+	"does not list \`dpop-key\`"
+
+# The mirror, and the one that matters more to a reader: a method README offers
+# that the schema rejects sends them to write a passport that does not validate.
+run_case "attestation-methods-agree: README offers a method the schema rejects" fail \
+	'./scripts/attestation-methods-agree.sh' \
+	"$(py 'edit("README.md", "`dpop-key`;", "`dpop-key` · `smart-card`;")')" \
+	"which the schema rejects"
+
+run_case "attestation-methods-agree: SPEC 4.3 is short a method" fail \
+	'./scripts/attestation-methods-agree.sh' \
+	"$(py 'edit("SPEC.md", "`mtls-cert` ·\n`dpop-key`.", "`mtls-cert`.")')" \
+	"SPEC 4.3"
+
+run_case "attestation-methods-agree: an example declares a method the schema rejects" fail \
+	'./scripts/attestation-methods-agree.sh' \
+	"$(py 'import json
+p = "examples/passport.json"
+d = json.load(open(p))
+d.setdefault("attestation", {})["method"] = "smart-card"
+json.dump(d, open(p, "w"), indent=2)')" \
+	"which the schema rejects"
+
 echo "=== and what they must NOT catch ==="
+
+# Prose naming a method is not a list of them. 4.3's own paragraphs discuss
+# `dpop-key` and `mtls-cert` by name, and the day this gate calls that a second
+# copy is the day somebody stops explaining the field.
+run_case "attestation-methods-agree: prose that names a method" pass \
+	'./scripts/attestation-methods-agree.sh' \
+	"$(py 'edit("SPEC.md", "### 4.4 `filesystem`", "Note: `oidc` is the common one.\n\n### 4.4 `filesystem`")')"
+
+# And the case that catches the enum being hardcoded here rather than read. A
+# seventh method, added in all three places, must be accepted.
+run_case "attestation-methods-agree: a method added to the schema and both lists" pass \
+	'./scripts/attestation-methods-agree.sh' \
+	"$(py 'edit("schemas/agent-passport.schema.json", "\"mtls-cert\", \"dpop-key\"", "\"mtls-cert\", \"dpop-key\", \"smart-card\"")
+edit("SPEC.md", "`dpop-key`.", "`dpop-key` · `smart-card`.")
+edit("README.md", "`dpop-key`;", "`dpop-key` · `smart-card`;")')"
 
 # An unregistered provider in free prose is not a fault. The field is an open
 # string by design, this repo discusses providers it does not register, and a
@@ -465,6 +506,34 @@ for f in glob.glob("schemas/*.schema.json"):
     subprocess.run(["git", "mv", f, f + ".disabled"], check=True)
     n += 1
 assert n, "no schemas in this repo"')" \
+	"measured nothing"
+
+run_case "attestation-methods-agree: the schema stops closing the set" fail \
+	'./scripts/attestation-methods-agree.sh' \
+	"$(py 'edit("schemas/agent-passport.schema.json", "\"enum\": [\"none\"", "\"examples\": [\"none\"")')" \
+	"measured nothing"
+
+
+run_case "attestation-methods-agree: SPEC 4.3 loses its heading" fail \
+	'./scripts/attestation-methods-agree.sh' \
+	"$(py 'edit("SPEC.md", "### 4.3 `attestation.method`", "### 4.11 `attestation.method`")')" \
+	"measured nothing"
+
+run_case "attestation-methods-agree: README loses the row entirely" fail \
+	'./scripts/attestation-methods-agree.sh' \
+	"$(py 'edit("README.md", "| `attestation.method` | no |", "| `attestation.methods` | no |")')" \
+	"measured nothing"
+
+	"measured nothing"
+
+run_case "attestation-methods-agree: no example declares an attestation" fail \
+	'./scripts/attestation-methods-agree.sh' \
+	"$(py 'import json, pathlib
+for p in pathlib.Path("examples").glob("*.json"):
+    d = json.load(open(p))
+    if isinstance(d, dict):
+        d.pop("attestation", None)
+        json.dump(d, open(p, "w"), indent=2)')" \
 	"measured nothing"
 
 echo

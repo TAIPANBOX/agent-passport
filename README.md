@@ -216,7 +216,7 @@ depends on fetching it. Schema:
 | `display_name` | no | human-readable name |
 | `runtime` | no | the framework that drives the agent's control loop; a declaration for audit and inventory, not an enforced control. Ids are registered in SPEC.md §4.8 and an unregistered value stays legal |
 | `parent` | no | static provisioning parent agent ID, distinct from the dynamic `on_behalf_of` chain |
-| `attestation.method` | no | one of `none` · `oidc` · `spiffe-svid` · `enclave-key` · `mtls-cert`; `none` is legal and honest, the field exists so the posture is visible |
+| `attestation.method` | no | one of `none` · `oidc` · `spiffe-svid` · `enclave-key` · `mtls-cert` · `dpop-key`; `none` is legal and honest, the field exists so the posture is visible |
 | `attestation.detail` | no | method-specific reference, e.g. a SPIFFE ID or issuer URL |
 | `filesystem` | no | folders the agent is declared to access, each `{ path, mode }` with `mode` one of `read` · `write`; a declaration, not an enforced control (SPEC.md §4.4) |
 | `models` | no | LLM providers, models, and endpoints the agent is declared to use, each `{ provider, model?, endpoint? }` with only `provider` required; a declaration for audit and inventory, not an enforced control (SPEC.md §4.5) |

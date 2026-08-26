@@ -712,6 +712,7 @@ Registered sources today:
 | `console` | the operator console's own privileged actions (Genaryx) |
 | `heraldyx` | operator notification (mail out) |
 | `scopyx` | web-egress enforcement (agents fetch through it) |
+| `vouchryx` | delegation issue and revocation (RFC 8693 token exchange) |
 
 wardryx, verdryx, and mockryx are wave-2 services; like the original four,
 this contract governs an operator's own agents, for the operator's own
@@ -730,6 +731,7 @@ self-protection, not third-party or adversarial traffic.
 | `mockryx` | `sim_run` (info) · `sim_finding` (high) · `blast_radius_measured` (medium) |
 | `console` | `console_command` |
 | `heraldyx` | `alert_sent` (info) |
+| `vouchryx` | `delegation_issued` (info) · `delegation_denied` (high) · `delegation_revoked` (high) |
 | `scopyx` | `web_fetch` (low) · `web_blocked` (high) |
 
 

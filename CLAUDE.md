@@ -60,6 +60,7 @@ python .github/scripts/validate_examples.py
 ./scripts/version-compatibility.sh
 ./scripts/artifacts-match-registry.sh
 ./scripts/providers-match-registry.sh
+./scripts/runtimes-match-registry.sh
 ./scripts/gates-have-teeth.sh     # invariant 8; needs a clean tree and jsonschema
 ```
 
@@ -167,11 +168,59 @@ an absent invariant.
    prose. Eight cases in `scripts/gates-have-teeth.sh`: three faults, two
    non-faults it must not catch, and three subjects taken away.)*
 
+10. **Nothing in this repo names an agent framework in a spelling the 4.8
+    registry does not carry.** This is invariant 9 one field over, and the
+    field arrived in a worse state than `provider` did: `runtime` was in the
+    schema and in the section 4 example from v0.1 and SPEC.md defined it
+    nowhere, so it had a shape and no meaning. 4.8 gives it one and fixes its
+    spelling at the same time.
+
+    **A registry and not a schema enum, and here that is doubly forced.**
+    Invariant 5's widening rule forbids narrowing an open field, exactly as it
+    does for `provider`. On top of that `runtime` has BEEN open since v0.1, so
+    an enum would retroactively invalidate passports that were valid when they
+    were written, and 6.4 declines to re-version the passport schema at all
+    because Idryx hard-codes `requiredSchema =
+    "taipanbox.dev/agent-passport/v0.1"`. `attestation.method` is a closed enum
+    and is not a counter-example: a consumer ACTS on an attestation method and
+    cannot judge one it does not know, while an unregistered `runtime` still
+    carries its whole meaning, which is the name of a framework.
+
+    The rule a consumer carries is invariant 9's rule verbatim: lowercase both
+    sides before comparing and do nothing else. An unregistered value is legal
+    and MUST NOT be rejected.
+    *(gate: `scripts/runtimes-match-registry.sh`, which reads 4.8 as the source
+    of truth and measures every top-level `runtime` in `examples/*.json`,
+    section 4's own passport example, the schema's description of the field and
+    README's passport field table. The last two both said "e.g. langgraph" when
+    the gate was written, which is the second-copy fault it exists for, live on
+    main. Its limits are declared in the file: it says nothing about a passport
+    outside this repo, cannot tell `langchain` written where `langgraph` was
+    meant from a right answer, reads no free prose, and deliberately does not
+    read the SVGs, because README renders a PNG this repo holds no generator
+    for and a gate forcing an SVG edit would open a divergence it cannot close.
+    Ten cases in `scripts/gates-have-teeth.sh`: four faults, two non-faults it
+    must not catch, and four subjects taken away.)*
+
+    **Why a second script rather than two more cases in invariant 9's.** Both
+    gates exit on the first "measured nothing" condition, which is the point of
+    them; folded together, a missing 4.8 heading would abort before a single
+    provider was compared and the run would name the wrong subject as gone. The
+    subjects also differ in shape, `provider` being nested in an array under a
+    `### 4.5` section and `runtime` a top-level scalar whose example lives
+    under `## 4`. The cost is a third copy of the same registry-table parser,
+    and it is written down in the script rather than left to be discovered.
+
 8. **A check must be able to tell "did not fail" from "did not run", and every
-   gate here has been made to fail on purpose to prove it can.** The three
-   script gates already refuse when their subject is absent, in five distinct
-   ways: no schemas found, jsonschema unavailable, the 6.2 heading gone, the
-   registry table header gone, a registry that parsed to too few sources. And
+   gate here has been made to fail on purpose to prove it can.** Every
+   script gate already refuses when its subject is absent, each in its own
+   words: no schemas found, jsonschema unavailable, a registry heading gone, a
+   registry table header gone, a registry that parsed to too few rows, the
+   governed field gone from the schema, the example that was to be measured
+   carrying nothing. That list deliberately no longer counts itself, for the
+   reason SPEC 6.2 gives about its own detector figure: a total in prose ages
+   separately from the thing it counts, and this one was still saying "three
+   script gates, five distinct ways" after a fourth gate had arrived. And
    invariant 3 says in as many words that the validator was "verified by
    breaking it three ways". Every one of those sentences was true. Every one
    was established by hand, once, in the session that wrote the script, and
@@ -189,8 +238,8 @@ an absent invariant.
    not the change this file's escalation rule is about: nothing is committed,
    the tree is asserted clean before the run reports success, and a run that
    left residue fails instead. A spec change is still a decision for the user.
-   *(gate: `scripts/gates-have-teeth.sh`, 19 cases: ten real faults each gate
-   must catch, four non-faults they must not, and five subjects taken away
+   *(gate: `scripts/gates-have-teeth.sh`, 29 cases: fourteen real faults each
+   gate must catch, six non-faults they must not, and nine subjects taken away
    entirely. The non-faults are the ones worth keeping: prose that names
    something no schema declares is deliberately allowed by invariant 2's
    half-surface, and a raised ceiling is the widening 6.4 promises.)*
@@ -211,7 +260,8 @@ an absent invariant.
 This list is debt, and it is here to stay visible rather than to be tidy.
 
 **Held by this file alone: invariants 1 and 6.** Invariant 9 is
-`scripts/providers-match-registry.sh`.
+`scripts/providers-match-registry.sh` and invariant 10 is
+`scripts/runtimes-match-registry.sh`.
 
 Invariant 2 is now half held by `scripts/schema-matches-spec.sh`, which walks
 every property declared anywhere in `schemas/*.json`, including nested ones and

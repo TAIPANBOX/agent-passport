@@ -406,6 +406,114 @@ inventory asks, and it is also the one row where a registered id does not tell
 a reader which model ran the prompt. A consumer MUST NOT infer an onward
 provider from it.
 
+### 4.8 `runtime`, and the registered runtime ids
+
+The passport document at the top of section 4 has carried
+`"runtime": "langgraph"` since v0.1, the schema has declared the field since
+v0.1, and until this subsection this specification said nothing else about it
+anywhere. The field had a shape and no meaning: nothing here said whether it
+was required, what an absent value meant, what a consumer was allowed to do
+with it, or how it was spelled. That last one is 4.7's problem arriving a
+second time, on a field whose vocabulary moves faster.
+
+`runtime` names the framework that drives the agent's control loop.
+
+- Optional, and one string rather than a list. An absent `runtime` means "not
+  declared", never "no framework", the same reading `filesystem` (4.4) and
+  `models` (4.5) already take. Consumers MUST ignore the field if they do not
+  model it.
+- Like those two, it is a *declaration of intent* for audit and inventory, not
+  an enforced control. Nothing in this format loads, restricts or verifies a
+  framework, and a consumer MUST NOT read the field as evidence that the agent
+  is running what it says.
+
+| id | names |
+|---|---|
+| `langchain` | LangChain, its own agent and chain constructs |
+| `langgraph` | LangGraph, the graph runtime built beside LangChain |
+| `crewai` | CrewAI |
+| `autogen` | Microsoft AutoGen |
+| `semantic-kernel` | Microsoft Semantic Kernel |
+| `microsoft-agent-framework` | Microsoft Agent Framework, which converges Semantic Kernel and AutoGen |
+
+**The rules of 4.7 apply here unchanged, with `runtime` in the place of
+`provider`, and they are not copied.** A rule stated twice drifts, and 6.4
+records this document being wrong that way twice already. What they are, one
+line each so a reader knows what they are going to read: a producer SHOULD use
+a registered id when one names the framework; an unregistered value is legal
+and a consumer MUST NOT reject it; ids are lowercase and use `[a-z0-9-]`; a
+consumer comparing them MUST lowercase both sides and SHOULD do nothing else;
+ids are appended, never renamed. 4.7 is where each of those is stated
+normatively.
+
+**An enum and a registry are different promises, and this field makes the
+second one.** A closed enum says the set is complete: a value outside it is
+malformed, and a consumer is right to refuse the document carrying it. A
+registry says the set is what we have agreed to spell one way: a value outside
+it is legal, means exactly what it says, and a consumer that refuses it is the
+one with the bug. `runtime` stays an open string, so an agent on an in-house
+framework and one on a framework released next month are both declarable, and
+the passports declaring them are valid.
+
+Three things force that rather than merely recommending it.
+
+- **The field already shipped open.** `runtime` is `type: string` with no
+  further constraint in `schemas/agent-passport.schema.json` at v0.1, and every
+  passport written since carries whatever its author typed. An enum added now
+  would not be a new field arriving narrow, it would retroactively invalidate
+  documents that were valid when they were written.
+- **The narrowing is forbidden anyway.** Each version widens the one before it,
+  which is why 4.7 stays prose too. An enum is a narrowing, so it would need a
+  new passport schema version, and 6.4 says why there is not one: Idryx
+  hard-codes `requiredSchema = "taipanbox.dev/agent-passport/v0.1"`. The cost
+  of an enum here is not a line in a schema, it is a coordinated release across
+  the repositories that read this contract.
+- **The set moves faster than a schema can.** 4.7's providers are companies
+  and a few appear a year. Agent frameworks appear continuously, are forked
+  routinely, and the one an enterprise most wants an inventory to name is
+  frequently the one it wrote itself, which will never have an id here.
+
+**`attestation.method` is a closed enum and that is not an inconsistency**,
+because the two fields ask a consumer for different things. A consumer ACTS on
+an attestation method: `spiffe-svid` means something is proven and `none` means
+it is not, so a value a consumer cannot place leaves it unable to judge the
+posture 4.3 exists to make visible, and that is why extending that list is a
+schema change every time, as `dpop-key` was. Nothing acts on `runtime`. An
+unregistered value there still carries its entire meaning, which is the name of
+a framework, and a consumer that has never heard of it can group by it, display
+it and count it exactly as well as it can a registered one. Close the set where
+an unknown value is useless; leave it open where an unknown value is the whole
+answer.
+
+**What this registry fixes is the spelling, and only the spelling**, the same
+sentence 4.7 makes and for the same reason. Here it is worth more than a
+caveat. 4.5's declaration can be checked against two independent observations,
+a source scan and an egress sensor, and this one can be checked against one: a
+framework is visible in an agent's source and its dependency manifest, and it
+is not visible on the network, because a LangGraph agent and a hand-rolled loop
+calling the same API put the same bytes on the wire. So a `runtime` declaration
+is corroborated by a source scan or not at all, and a consumer MUST NOT read
+agreement between this field and what an egress sensor saw as agreement about
+the framework.
+
+**Which id, when more than one is true, and it usually is.** A LangGraph agent
+has `langchain` in its dependency list. The field names the framework that owns
+the agent's control loop, the thing deciding what runs next, not everything the
+process imports, so an agent whose graph is a LangGraph graph declares
+`langgraph` with `langchain` installed beside it. This is 4.7's corollary in a
+second setting: a dependency list is not the answer, and one entry in it is not
+the destination.
+
+**The three Microsoft rows are three ids on purpose, and 4.7's rename rule is
+why.** Microsoft Agent Framework converges Semantic Kernel and AutoGen, which
+invites registering one id and folding the other two onto it. Ids are appended
+and never renamed: a passport saying `semantic-kernel` was written by somebody
+running Semantic Kernel, and redefining that string would change what every
+such passport declares, silently, with no version stamp on this list to tell a
+reader which meaning they are holding. The predecessors keep meaning what they
+always meant, and an agent that has actually been migrated declares the
+successor.
+
 ## 5. Delegation chain
 
 Idryx already models one hop (`OnBehalfOf`). Agents spawn sub-agents, so one

@@ -32,6 +32,9 @@ jobs:
       - name: providers match the SPEC 4.7 registry
         run: ./scripts/providers-match-registry.sh
 
+      - name: runtimes match the SPEC 4.8 registry
+        run: ./scripts/runtimes-match-registry.sh
+
       # Last, because it mutates tracked files, including schemas/ and SPEC.md,
       # and restores them. Nothing is committed and the tree is asserted clean
       # before it reports success. It needs a clean tree and says so plainly,

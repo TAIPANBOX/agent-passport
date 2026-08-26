@@ -61,6 +61,7 @@ python .github/scripts/validate_examples.py
 ./scripts/artifacts-match-registry.sh
 ./scripts/providers-match-registry.sh
 ./scripts/runtimes-match-registry.sh
+./scripts/attestation-methods-agree.sh
 ./scripts/gates-have-teeth.sh     # invariant 8; needs a clean tree and jsonschema
 ```
 
@@ -238,9 +239,9 @@ an absent invariant.
    not the change this file's escalation rule is about: nothing is committed,
    the tree is asserted clean before the run reports success, and a run that
    left residue fails instead. A spec change is still a decision for the user.
-   *(gate: `scripts/gates-have-teeth.sh`, 29 cases: fourteen real faults each
-   gate must catch, six non-faults they must not, and nine subjects taken away
-   entirely. The non-faults are the ones worth keeping: prose that names
+   *(gate: `scripts/gates-have-teeth.sh`, 39 cases: eighteen real faults each
+   gate must catch, eight non-faults they must not, and thirteen subjects taken
+   away entirely. The non-faults are the ones worth keeping: prose that names
    something no schema declares is deliberately allowed by invariant 2's
    half-surface, and a raised ceiling is the widening 6.4 promises.)*
 
@@ -362,3 +363,31 @@ error in non-normative prose, or adding an example that validates as-is.
   or PR bodies. Use a comma, a colon, parentheses, or a short hyphen.
 - Nothing paid or metered gets enabled without telling the user first.
 - Do not delete or revoke keys, tokens, or certificates on your own initiative.
+
+11. **Every list of attestation methods in this repo lists the same ones.**
+    `attestation.method` looks like invariants 9 and 10 and is not one of them,
+    and the difference decides where its truth lives. Those two govern OPEN
+    labels that SPEC registers a spelling for, so SPEC's table is the source
+    and the schema points at it. This is a CLOSED enum: the schema does not
+    point at a list, the schema IS the list, and 4.8 argues why the two are
+    different promises. A consumer ACTS on an attestation method, so a value it
+    cannot place leaves it unable to judge the posture 4.3 exists to make
+    visible, which is why extending the set is a schema change every time.
+
+    That inversion is also why this is not a fourth copy of the registry-table
+    parser the other three share and name as debt. The enum is read as JSON and
+    everything else is compared to it.
+
+    **What made it necessary.** `dpop-key` was added to 4.3 and to the schema
+    on 2026-08-26 and not to README, whose row went on offering five methods as
+    though that were the set. Nothing was wrong in either file alone. The
+    schema was right, the spec was right, and the table most readers reach
+    first was a quietly short answer to "what may I write here". Five gates
+    already ran on every push and none of them read an enum, so it would have
+    stayed that way until somebody wrote a passport from README and could not
+    work out why it validated fine.
+    *(gate: `scripts/attestation-methods-agree.sh`, which reads the schema enum
+    as the source and measures 4.3's `One of:` line, README's field table and
+    every example against it. Four cases in `gates-have-teeth.sh` for the
+    faults, two for what it must not catch, and four for its subjects taken
+    away.)*

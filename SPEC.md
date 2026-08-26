@@ -522,7 +522,7 @@ self-protection, not third-party or adversarial traffic.
 | `idryx` | `identity_finding` (severity per finding) |
 | `qryx` | `crypto_finding` · `crypto_drift` · `policy_violation` · `evidence_signed` |
 | `wardryx` | `policy_allow` (info) · `policy_deny` (high) · `approval_requested` (medium) · `approval_granted` (info) · `approval_denied` (high) · `approval_timeout` (high) · `approval_unanswered` (high) · `policy_updated` (high) |
-| `verdryx` | `eval_run` (info) · `quality_score` (info) · `quality_drift` (high) |
+| `verdryx` | `eval_run` (info) · `quality_score` (info) · `quality_drift` (high) · `slo_burn` (high) |
 | `mockryx` | `sim_run` (info) · `sim_finding` (high) · `blast_radius_measured` (medium) |
 | `console` | `console_command` |
 | `heraldyx` | `alert_sent` (info) |
@@ -726,6 +726,96 @@ call sites, and every downstream count of "how many high events" then measures
 who wrote the call rather than what happened. It is `high` whichever `effect`
 the event carries, deliberately, because an ungoverned call is not a smaller
 fact than a failed one.
+
+`slo_burn` is the first type in this registry that reports a STANDING
+QUANTITY rather than an occurrence. Every type above says that a thing
+happened: a run was killed, a call was blocked, a score moved, a dependency
+died. This one says how much of an agent's error budget is left against an
+objective its operator set, which is a level rather than an event. It exists
+because that is the question an enterprise asks before it deploys an agent, and
+until this type existed nothing here answered it: verdryx emits `eval_run`,
+`quality_score` and `quality_drift`, and none of the three says whether an
+agent is reliable ENOUGH, because a score is a number with no denominator and
+drift is a change with no threshold.
+
+**Two things called a budget, and they are not the same thing.** TokenFuse's
+`budget_exhausted` is money, it fires at the moment a spend ceiling is reached,
+and something enforces it: the call is blocked and the caller gets a 402. An
+error budget here is reliability, it is computed over a window rather than
+reached at an instant, and nothing enforces it at all. The paragraph below on
+enforcement is there because the shared word invites the wrong reading.
+
+Read from `verdryx/events.py`, which fixes the wire string and the severity in
+its `EVENT_SEVERITY` map, rather than from its docs. `data` carries the
+objective, the evidence, the budget and the grouping. `sli` is which service
+level indicator the budget is against, one of `task_success`, `quality_floor`,
+`containment` or `cost_discipline`. `target` is the objective itself, a
+fraction such as 0.95. `observed` is the measured ratio of good runs over
+eligible runs, and `window` is the period it was computed over, `28d` for
+example.
+
+**`observed` on its own is not evidence, and the three members beside it are
+what make it evidence.** `ci_low` and `ci_high` are the Wilson interval at the
+configured confidence, and `events` is how many runs the ratio was computed
+over. Nine good runs out of ten is an observed 0.90 against a target of 0.95,
+and at 95% confidence the interval around it runs from roughly 0.60 to 0.98, so
+it still contains the target: the ratio says breach and the interval says not
+established yet. A consumer that renders `observed` without reading `events`
+puts an operator in front of a number that may rest on three runs, with nothing
+on the screen to say so. The interval travels in the event precisely so a
+reader can tell a real breach from a small sample without going back to verdryx
+to ask.
+
+`budget_remaining` is the fraction of the error budget left, and **it goes
+negative, which is not a bug and must not be clamped.** A target of 0.95 allows
+5% of the runs in the window to be bad; when 10% have been, the remaining
+budget is not zero, it is minus 1.0, and what that says is that twice the
+allowance has been spent. The sign is the only place in the event carrying how
+far past the line an agent already is, so a consumer that floors it at zero
+makes every overspent agent look identically exhausted, and the one that is
+twenty times over reads the same as the one that crossed this morning.
+`burn_rate` is the same fact against the clock: how many times faster than the
+budget allows the failures are arriving.
+
+**It is emitted on `trigger: "exhausted"` and `trigger: "fast_burn"` only, and
+a slow burn never reaches this bus at all.** That is a designed hole rather
+than a gap. Severity is fixed per type in code rather than chosen at the
+emission site, the sentence the `scopyx` and `dependency_failed` paragraphs
+above both make and for the same reason, and its consequence here is that one
+type is one paging band: everything named `slo_burn` arrives at `high`. A
+budget that will be gone by Friday and a budget that is already gone are not
+the same fact and must not share a band, and a type that pages for the design
+working teaches an operator to filter the sender, which costs the exhausted
+case its audience as well. This registry already carries that split one size
+down, in `budget_threshold` sitting deliberately one band below the incident it
+warns about. Here the warning is given no band at all: the slow-burn figure
+stays in verdryx's own report and its JSON output, where a dashboard reads it
+and nobody is woken by it.
+
+**This type reports a measurement, and nothing in this stack acts on it.**
+verdryx computes the budget and says so. It writes no wardryx policy, it
+demotes no agent, and there is no autonomy tier anywhere in this estate for an
+agent to be moved down into. Saying that is not pedantry, because the
+vocabulary invites the other reading: an error budget in the setting the term
+comes from arrives attached to a release freeze, and a consumer that assumes
+the same here would build a console showing a consequence that never happened,
+which is worse than a console showing nothing. A person decides what an
+exhausted budget means for an agent. This type is what they read before
+deciding.
+
+`identity_field` says which field the subject was grouped on, `agent_id` or
+`key_id`, and it is the member that tells a consumer what the number is worth.
+A budget grouped on `agent_id` is grouped on a client-supplied header, and
+TokenFuse's own source says so where the alternative is declared
+(`crates/gateway/src/sink.rs`): it calls `agent_id` sound for attribution that
+a cooperating fleet reports about itself and unsound as the key of a budget,
+which a caller could move off simply by sending a different one. `key_id` is
+resolved server-side and carries no such weakness, and it is empty on every
+deployment that has not configured client keys, so the sound grouping is
+frequently not the one available. Both are honest and they do not weigh the
+same, and a consumer that counts them as one thing is making the mistake
+`scopyx`'s `enforcement` and `dependency_failed`'s `effect` each have a
+paragraph about above.
 
 The first four TokenFuse types are its existing incident taxonomy verbatim —
 zero renaming. New types may be added freely within a `source`; renames or

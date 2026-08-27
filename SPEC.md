@@ -625,6 +625,17 @@ Both halves of that were found by running the mapping rather than by reading
 either document: reversing without prepending the subject writes a delegation
 chain **with the human missing from it**, and every token still verifies.
 
+**The depth bound in 5.1 counts entries of `on_behalf_of`, so it is not a bound
+on `act`.** The subject becomes the chain's first entry, so a token that names
+one has room for one actor fewer than the bound: at 32 entries, 31 actors. A
+verifier that applies the bound to the actor list and then prepends the subject
+emits a chain one longer than the bound, which every consumer validating against
+the schemas in this repository refuses. This is a consequence of 5.1 and 5.3
+together and adds no requirement to either; it is written out because both
+implementations of the mapping in this estate read it the other way on
+2026-08-27, and a token carrying 32 actors verified at the door while every
+record it produced was quarantined.
+
 ### 5.1 Cycle safety (normative)
 
 The `on_behalf_of` chain MUST be acyclic. A service appends exactly one

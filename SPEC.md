@@ -724,6 +724,7 @@ Registered sources today:
 | `heraldyx` | operator notification (mail out) |
 | `scopyx` | web-egress enforcement (agents fetch through it) |
 | `vouchryx` | delegation issue and revocation (RFC 8693 token exchange) |
+| `costcrew` | FinOps console, agent-staffed. A guest producer: it writes and calls nobody |
 
 wardryx, verdryx, and mockryx are wave-2 services; like the original four,
 this contract governs an operator's own agents, for the operator's own
@@ -744,6 +745,7 @@ self-protection, not third-party or adversarial traffic.
 | `heraldyx` | `alert_sent` (info) |
 | `vouchryx` | `delegation_issued` (info) · `delegation_denied` (high) · `delegation_revoked` (high) |
 | `scopyx` | `web_fetch` (low) · `web_blocked` (high) |
+| `costcrew` | `spend_spike` (low to critical, by excess) · `budget_threshold` (low to high, by how far past) · `anomaly_triaged` · `anomaly_explained` · `anomaly_accepted` · `anomaly_dismissed` (all low to critical, by excess) · `budgets_set` · `forecast_frozen` · `explainer_published` · `sprint_planned` · `agent_hired` · `agent_rebriefed` · `agent_removed` · `agent_transferred` (all info) · `agent_state_changed` (info, high when the state is not active) |
 
 
 A row here is a CLAIM that the source writes those types into this envelope

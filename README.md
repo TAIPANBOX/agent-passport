@@ -281,6 +281,7 @@ Registered sources today:
 | `heraldyx` | operator notification (mail out) | `alert_sent` (info) |
 | `scopyx` | web-egress enforcement (agents fetch through it) | `web_fetch` (low) · `web_blocked` (high) |
 | `vouchryx` | delegation issue and revocation (RFC 8693 token exchange) | `delegation_issued` (info) · `delegation_denied` (high) · `delegation_revoked` (high) |
+| `costcrew` | FinOps console, agent-staffed. A guest producer: it writes and calls nobody | `spend_spike` (low to critical, by excess) · `budget_threshold` (low to high, by how far past) · `anomaly_triaged` · `anomaly_explained` · `anomaly_accepted` · `anomaly_dismissed` (all low to critical, by excess) · `budgets_set` · `forecast_frozen` · `explainer_published` · `sprint_planned` · `agent_hired` · `agent_rebriefed` · `agent_removed` · `agent_transferred` (all info) · `agent_state_changed` (info, high when the state is not active) |
 
 The `console` row is Genaryx, the operator's own console: one `console_command`
 per privileged mutation it makes (kill a run, change a budget, decide an

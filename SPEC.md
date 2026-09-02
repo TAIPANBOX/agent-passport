@@ -745,7 +745,7 @@ self-protection, not third-party or adversarial traffic.
 | `heraldyx` | `alert_sent` (info) |
 | `vouchryx` | `delegation_issued` (info) · `delegation_denied` (high) · `delegation_revoked` (high) |
 | `scopyx` | `web_fetch` (low) · `web_blocked` (high) |
-| `costcrew` | `spend_spike` (low to critical, by excess) · `budget_threshold` (low to high, by how far past) · `anomaly_triaged` · `anomaly_explained` · `anomaly_accepted` · `anomaly_dismissed` (all low to critical, by excess) · `budgets_set` · `forecast_frozen` · `explainer_published` · `sprint_planned` · `agent_hired` · `agent_rebriefed` · `agent_removed` · `agent_transferred` (all info) · `agent_state_changed` (info, high when the state is not active) · `generated_estate_replaced` (info: a person replaced the generated estate with real charges through a connector, and the tables it emptied are named in `data`) |
+| `costcrew` | `spend_spike` (low to critical, by excess) · `budget_threshold` (low to high, by how far past) · `anomaly_triaged` · `anomaly_explained` · `anomaly_accepted` · `anomaly_dismissed` (all low to critical, by excess) · `budgets_set` · `forecast_frozen` · `explainer_published` · `sprint_planned` · `agent_hired` · `agent_rebriefed` · `agent_removed` · `agent_transferred` (all info) · `agent_state_changed` (info, high when the state is not active) · `generated_estate_replaced` (info: a person replaced the generated estate with real charges through a connector; the event names the tables it emptied) |
 
 
 A row here is a CLAIM that the source writes those types into this envelope

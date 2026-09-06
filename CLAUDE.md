@@ -54,7 +54,7 @@ changes what an implementer would build, it is a spec change.
 ## Gates
 
 ```sh
-pip install "jsonschema>=4.18"
+pip install "jsonschema==4.26.0"
 python .github/scripts/validate_examples.py
 ./scripts/schema-matches-spec.sh
 ./scripts/version-compatibility.sh

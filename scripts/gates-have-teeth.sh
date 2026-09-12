@@ -377,7 +377,12 @@ json.dump(d, open(p, "w"), indent=2)')" \
 
 run_case "attestation-methods-agree: the v1.0 passport schema is short a method" fail \
 	'./scripts/attestation-methods-agree.sh' \
-	"$(py 'edit("schemas/agent-passport.v1.0.schema.json", "\"mtls-cert\", \"dpop-key\"", "\"mtls-cert\"")')" \
+	"$(py 'import json
+p = "schemas/agent-passport.v1.0.schema.json"
+d = json.load(open(p))
+enum = d["properties"]["attestation"]["properties"]["method"]["enum"]
+enum.remove("dpop-key")
+json.dump(d, open(p, "w"), indent=2)')" \
 	"two versions of one document"
 
 run_case "features-are-bound: a scenario names no gate" fail \
@@ -401,9 +406,14 @@ run_case "attestation-methods-agree: prose that names a method" pass \
 
 # And the case that catches the enum being hardcoded here rather than read. A
 # seventh method, added in all three places, must be accepted.
-run_case "attestation-methods-agree: a method added to the schema and both lists" pass \
+run_case "attestation-methods-agree: a method added to the schema, every schema version and both lists" pass \
 	'./scripts/attestation-methods-agree.sh' \
-	"$(py 'edit("schemas/agent-passport.schema.json", "\"mtls-cert\", \"dpop-key\"", "\"mtls-cert\", \"dpop-key\", \"smart-card\"")
+	"$(py 'import json
+edit("schemas/agent-passport.schema.json", "\"mtls-cert\", \"dpop-key\"", "\"mtls-cert\", \"dpop-key\", \"smart-card\"")
+p = "schemas/agent-passport.v1.0.schema.json"
+d = json.load(open(p))
+d["properties"]["attestation"]["properties"]["method"]["enum"].append("smart-card")
+json.dump(d, open(p, "w"), indent=2)
 edit("SPEC.md", "`dpop-key`.", "`dpop-key` · `smart-card`.")
 edit("README.md", "`dpop-key`;", "`dpop-key` · `smart-card`;")')"
 
@@ -617,8 +627,6 @@ run_case "attestation-methods-agree: SPEC 4.3 loses its heading" fail \
 run_case "attestation-methods-agree: README loses the row entirely" fail \
 	'./scripts/attestation-methods-agree.sh' \
 	"$(py 'edit("README.md", "| `attestation.method` | no |", "| `attestation.methods` | no |")')" \
-	"measured nothing"
-
 	"measured nothing"
 
 run_case "attestation-methods-agree: no example declares an attestation" fail \

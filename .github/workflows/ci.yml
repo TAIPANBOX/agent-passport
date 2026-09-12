@@ -28,7 +28,7 @@ jobs:
         run: python .github/scripts/validate_examples.py
       - name: schemas match SPEC.md
         run: ./scripts/schema-matches-spec.sh
-      - name: v0.2 widens v0.1
+      - name: each schema version widens the one before it, the one narrowing SPEC 6.4.1 names excepted
         run: ./scripts/version-compatibility.sh
       - name: artifacts match the SPEC 6.2 registry
         run: ./scripts/artifacts-match-registry.sh
@@ -40,6 +40,9 @@ jobs:
 
       - name: every list of attestation methods matches the schema's enum
         run: ./scripts/attestation-methods-agree.sh
+
+      - name: every scenario in features/ names a gate that exists
+        run: ./scripts/features-are-bound.sh
 
       # Last, because it mutates tracked files, including schemas/ and SPEC.md,
       # and restores them. Nothing is committed and the tree is asserted clean

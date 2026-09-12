@@ -100,6 +100,38 @@ if len(methods) < 3:
 canonical = list(methods)
 canonical_set = set(canonical)
 
+# Since 1.0 the Passport has more than one schema version, and a closed enum
+# that differs between two versions of one document is two contracts wearing
+# one name. The v0.1 file stays the source; every other passport schema must
+# carry the same list in the same order.
+sibling_versions = 0
+for other in sorted(pathlib.Path("schemas").glob("agent-passport*.schema.json")):
+    if other == schema_path:
+        continue
+    try:
+        odoc = json.loads(other.read_text())
+    except ValueError as exc:
+        print(f"FAIL: {other} does not parse ({exc}), so this check measured nothing about it.")
+        sys.exit(1)
+    onode = (
+        odoc.get("properties", {})
+        .get("attestation", {})
+        .get("properties", {})
+        .get("method", {})
+    )
+    oenum = onode.get("enum")
+    if not isinstance(oenum, list) or not oenum:
+        print(f"FAIL: {other} declares no attestation enum, so one passport schema")
+        print("      version has an open set where another has a closed one, and this")
+        print("      check measured nothing about it.")
+        sys.exit(1)
+    sibling_versions += 1
+    if list(oenum) != canonical:
+        fail(
+            f"{other}'s attestation enum {oenum!r} differs from {schema_path}'s "
+            f"{canonical!r}: two versions of one document with two closed sets."
+        )
+
 for m in canonical:
     if not isinstance(m, str) or not re.fullmatch(r"[a-z0-9-]+", m):
         print(f"FAIL: the schema's attestation enum carries {m!r}, which is not an")
@@ -233,6 +265,7 @@ if fails:
 
 print(
     f"attestation: {len(canonical)} method(s) in the schema's enum, and SPEC 4.3, "
-    f"README's field table and {declaring} example(s) all agree with it."
+    f"README's field table, {declaring} example(s) and {sibling_versions} other passport "
+    f"schema version(s) all agree with it."
 )
 PY

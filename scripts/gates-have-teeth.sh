@@ -321,6 +321,75 @@ d.setdefault("attestation", {})["method"] = "smart-card"
 json.dump(d, open(p, "w"), indent=2)')" \
 	"which the schema rejects"
 
+# Invariant 12, SPEC 6.4.1's one narrowing: a key the v1.0 Passport schema never
+# named does not validate. The v0.1 mirror of this case is in the pass section.
+run_case "validate-examples: a v1.0 passport carries a key the schema never named" fail \
+	'python3 .github/scripts/validate_examples.py' \
+	"$(py 'import json
+p = "examples/passport.v1.0.json"
+d = json.load(open(p))
+d["agent_id"] = d["id"]
+json.dump(d, open(p, "w"), indent=2)')" \
+	"Additional properties are not allowed"
+
+run_case "validate-examples: an event stamped with a version this repo does not carry" fail \
+	'python3 .github/scripts/validate_examples.py' \
+	"$(py 'import json
+p = "examples/events.ndjson"
+lines = [l for l in open(p).read().splitlines() if l.strip()]
+d = json.loads(lines[-1])
+d["schema"] = "taipanbox.dev/agent-event/v1.5"
+lines[-1] = json.dumps(d)
+open(p, "w").write("\n".join(lines) + "\n")')" \
+	"unrecognized"
+
+# The major boundary may narrow ONE thing. Tightening anything else across it
+# is the ordinary fault, and the pair being a major must not excuse it.
+run_case "version-compatibility: the v1.0 passport tightens a bound across the major" fail \
+	'./scripts/version-compatibility.sh' \
+	"$(py 'import json
+p = "schemas/agent-passport.v1.0.schema.json"
+d = json.load(open(p))
+d["properties"]["display_name"]["maxLength"] = 3
+json.dump(d, open(p, "w"), indent=2)')" \
+	"no maxLength at all before"
+
+# And the one allowed narrowing, made INSIDE a major, is a fault: v0.3 closing
+# its top level would reject v0.2 events the promise says it accepts.
+run_case "version-compatibility: an event schema closes its top level inside a major" fail \
+	'./scripts/version-compatibility.sh' \
+	"$(py 'import json
+p = "schemas/agent-event.v0.3.schema.json"
+d = json.load(open(p))
+assert d.get("additionalProperties", True) is not False
+d["additionalProperties"] = False
+json.dump(d, open(p, "w"), indent=2)')" \
+	"inside one major version"
+
+run_case "version-compatibility: the v1.0 passport newly requires a field" fail \
+	'./scripts/version-compatibility.sh' \
+	"$(py 'import json
+p = "schemas/agent-passport.v1.0.schema.json"
+d = json.load(open(p))
+d["required"].append("display_name")
+json.dump(d, open(p, "w"), indent=2)')" \
+	"is required in the newer schema"
+
+run_case "attestation-methods-agree: the v1.0 passport schema is short a method" fail \
+	'./scripts/attestation-methods-agree.sh' \
+	"$(py 'edit("schemas/agent-passport.v1.0.schema.json", "\"mtls-cert\", \"dpop-key\"", "\"mtls-cert\"")')" \
+	"two versions of one document"
+
+run_case "features-are-bound: a scenario names no gate" fail \
+	'./scripts/features-are-bound.sh' \
+	"$(py 'edit("features/contract-1.0.feature", "    # @gate: scripts/schema-matches-spec.sh\n", "")')" \
+	"names no gate"
+
+run_case "features-are-bound: a scenario binds to a script that does not exist" fail \
+	'./scripts/features-are-bound.sh' \
+	"$(py 'edit("features/contract-1.0.feature", "# @gate: scripts/schema-matches-spec.sh", "# @gate: scripts/schema-matches-prose.sh")')" \
+	"does not exist"
+
 echo "=== and what they must NOT catch ==="
 
 # Prose naming a method is not a list of them. 4.3's own paragraphs discuss
@@ -363,6 +432,26 @@ run_case "runtimes-match-registry: a runtime appended to the registry" pass \
 	"$(py 'edit("SPEC.md", "| `microsoft-agent-framework` | Microsoft Agent Framework, which converges Semantic Kernel and AutoGen |", "| `microsoft-agent-framework` | Microsoft Agent Framework, which converges Semantic Kernel and AutoGen |\n| `llamaindex` | LlamaIndex |")')"
 
 
+# The mirror of invariant 12: v0.1 keeps its hole by decision, so the same
+# undeclared key on the v0.1 example is not a fault.
+run_case "validate-examples: the same unknown key on the v0.1 passport is tolerated" pass \
+	'python3 .github/scripts/validate_examples.py' \
+	"$(py 'import json
+p = "examples/passport.json"
+d = json.load(open(p))
+d["agent_id"] = d["id"]
+json.dump(d, open(p, "w"), indent=2)')"
+
+# Reopening the v1.0 top level is a widening; the gate must say nothing about it.
+run_case "version-compatibility: the v1.0 passport reopens its top level" pass \
+	'./scripts/version-compatibility.sh' \
+	"$(py 'import json
+p = "schemas/agent-passport.v1.0.schema.json"
+d = json.load(open(p))
+assert d.get("additionalProperties") is False
+d["additionalProperties"] = True
+json.dump(d, open(p, "w"), indent=2)')"
+
 # The gate is deliberately one-directional: prose without a schema field is
 # allowed, because free prose is most of a specification.
 run_case "schema-matches-spec: prose that names something no schema declares" pass \
@@ -383,7 +472,7 @@ run_case "schema-matches-spec: prose that names something no schema declares" pa
 run_case "version-compatibility: the newest schema raises an existing ceiling" pass \
 	'./scripts/version-compatibility.sh' \
 	"$(py 'import json
-p = "schemas/agent-event.v0.3.schema.json"
+p = "schemas/agent-event.v1.0.schema.json"
 d = json.load(open(p))
 sch = d["properties"]["agent_id"]
 assert "maxLength" in sch, "agent_id carries no maxLength to raise"
@@ -506,6 +595,12 @@ for f in glob.glob("schemas/*.schema.json"):
     subprocess.run(["git", "mv", f, f + ".disabled"], check=True)
     n += 1
 assert n, "no schemas in this repo"')" \
+	"measured nothing"
+
+run_case "features-are-bound: no features left to read" fail \
+	'./scripts/features-are-bound.sh' \
+	"$(py 'import subprocess
+subprocess.run(["git", "mv", "features", "features.disabled"], check=True)')" \
 	"measured nothing"
 
 run_case "attestation-methods-agree: the schema stops closing the set" fail \

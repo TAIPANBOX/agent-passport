@@ -4,9 +4,11 @@
 Checks, in order:
   1. Every schemas/*.json file is syntactically valid JSON and is itself a
      valid JSON Schema (draft 2020-12).
-  2. examples/passport.json validates against schemas/agent-passport.schema.json.
+  2. Every examples/passport*.json validates against the Passport schema its
+     own "schema" field names (v0.1 or v1.0). Under v1.0 a key the schema never
+     named is a failure, which is SPEC 6.4.1's one narrowing.
   3. Every line of examples/events.ndjson validates against the agent-event
-     schema matching its own "schema" field (v0.1, v0.2 or v0.3).
+     schema matching its own "schema" field (v0.1, v0.2, v0.3 or v1.0).
 
 Exits non-zero with a diagnostic on the first class of failure so CI fails
 loudly rather than silently drifting.
@@ -28,6 +30,12 @@ EVENT_SCHEMA_BY_ID = {
     "taipanbox.dev/agent-event/v0.1": SCHEMAS / "agent-event.schema.json",
     "taipanbox.dev/agent-event/v0.2": SCHEMAS / "agent-event.v0.2.schema.json",
     "taipanbox.dev/agent-event/v0.3": SCHEMAS / "agent-event.v0.3.schema.json",
+    "taipanbox.dev/agent-event/v1.0": SCHEMAS / "agent-event.v1.0.schema.json",
+}
+
+PASSPORT_SCHEMA_BY_ID = {
+    "taipanbox.dev/agent-passport/v0.1": SCHEMAS / "agent-passport.schema.json",
+    "taipanbox.dev/agent-passport/v1.0": SCHEMAS / "agent-passport.v1.0.schema.json",
 }
 
 
@@ -51,15 +59,30 @@ def check_schema_files() -> list[str]:
     return errors
 
 
+def passport_examples() -> list[Path]:
+    return sorted(EXAMPLES.glob("passport*.json"))
+
+
 def check_passport_example() -> list[str]:
     errors = []
-    schema_path = SCHEMAS / "agent-passport.schema.json"
-    example_path = EXAMPLES / "passport.json"
-    schema = load_json(schema_path)
-    example = load_json(example_path)
-    validator = Draft202012Validator(schema)
-    for err in sorted(validator.iter_errors(example), key=str):
-        errors.append(f"{example_path}: {err.message} (at {'/'.join(map(str, err.path))})")
+    examples = passport_examples()
+    if not examples:
+        return [f"{EXAMPLES}: no passport*.json example to validate, so this check measured nothing"]
+    validators: dict[str, Draft202012Validator] = {}
+    for schema_id, schema_path in PASSPORT_SCHEMA_BY_ID.items():
+        validators[schema_id] = Draft202012Validator(load_json(schema_path))
+    for example_path in examples:
+        example = load_json(example_path)
+        schema_id = example.get("schema") if isinstance(example, dict) else None
+        validator = validators.get(schema_id)
+        if validator is None:
+            errors.append(
+                f"{example_path}: unrecognized \"schema\" value {schema_id!r} "
+                f"(expected one of {sorted(PASSPORT_SCHEMA_BY_ID)})"
+            )
+            continue
+        for err in sorted(validator.iter_errors(example), key=str):
+            errors.append(f"{example_path}: {err.message} (at {'/'.join(map(str, err.path))})")
     return errors
 
 
@@ -109,7 +132,7 @@ def main() -> int:
 
     print("agent-passport schema/example validation OK: "
           f"{len(list(SCHEMAS.glob('*.json')))} schema(s), "
-          "1 passport example, events.ndjson all validated.")
+          f"{len(passport_examples())} passport example(s), events.ndjson all validated.")
     return 0
 
 

@@ -5,7 +5,7 @@
 **The thinnest possible shared fabric for AI-agent governance: one identifier, one delegation chain, one event envelope.**
 
 [![CI](https://github.com/TAIPANBOX/agent-passport/actions/workflows/ci.yml/badge.svg)](https://github.com/TAIPANBOX/agent-passport/actions/workflows/ci.yml)
-![Version](https://img.shields.io/badge/version-0.1-4493f8.svg)
+![Version](https://img.shields.io/badge/version-1.0-4493f8.svg)
 ![Spec](https://img.shields.io/badge/type-specification-2dd4bf.svg)
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)
 ![Status](https://img.shields.io/badge/status-accepted-success.svg)
@@ -113,7 +113,7 @@ flowchart TB
 ```
 
 - **Consumes**: nothing upstream; it is the canonical spec every service reads.
-- **Produces**: the `agent://` / `user://` identifier grammar, the Agent Passport document schema, and the agent-event envelope schema (`taipanbox.dev/agent-event/v0.2`).
+- **Produces**: the `agent://` / `user://` identifier grammar, the Agent Passport document schema (`taipanbox.dev/agent-passport/v0.1` and `/v1.0`), and the agent-event envelope schema (`taipanbox.dev/agent-event/v1.0`, with v0.1, v0.2 and v0.3 still live). What 1.0 freezes is SPEC.md §10.
 - **Talks to**: governs every service in the stack; **agent-stack-go** is its Go binding, and Rust (**TokenFuse**) and Python (**Engram**, **Verdryx**) carry their own bindings validated against the same schema.
 
 The full stack is TokenFuse (spend), Wardryx (policy), Vouchryx (delegation), Engram (memory), Idryx (access), Qryx (crypto), Verdryx (quality), Mockryx (pre-prod), scopyx (governed web egress), CostCrew (the bill), Trailryx (the record) and heraldyx (the mail out), on the shared Agent Passport + agent-event contract (agent-stack-go / agent-passport), configured via terraform-provider-taipan and driven from Genaryx, the console over all of it.
@@ -221,7 +221,7 @@ depends on fetching it. Schema:
 
 | Field | Required | Notes |
 |---|---|---|
-| `schema` | yes | const `taipanbox.dev/agent-passport/v0.1` |
+| `schema` | yes | const `taipanbox.dev/agent-passport/v0.1` or `taipanbox.dev/agent-passport/v1.0`; under v1.0 a top-level key the schema never named does not validate (SPEC.md §6.4.1) |
 | `id` | yes | canonical `agent://` identifier |
 | `owner` | yes | human or team principal (email or group); the auditor's first question, "whose agent is this?" |
 | `display_name` | no | human-readable name |
@@ -238,8 +238,11 @@ depends on fetching it. Schema:
 
 One JSON object per event, NDJSON when batched. Schema:
 [`schemas/agent-event.schema.json`](./schemas/agent-event.schema.json)
-(v0.1) and
-[`schemas/agent-event.v0.2.schema.json`](./schemas/agent-event.v0.2.schema.json).
+(v0.1),
+[`schemas/agent-event.v0.2.schema.json`](./schemas/agent-event.v0.2.schema.json),
+[`schemas/agent-event.v0.3.schema.json`](./schemas/agent-event.v0.3.schema.json) and
+[`schemas/agent-event.v1.0.schema.json`](./schemas/agent-event.v1.0.schema.json)
+(v1.0 is v0.3's shape; SPEC.md §6.4.1).
 The `type` registry is open per source (SPEC.md §6.2); the envelope
 itself is fixed.
 
@@ -260,11 +263,11 @@ itself is fixed.
 
 | Field | Required | Notes |
 |---|---|---|
-| `schema` | yes | `taipanbox.dev/agent-event/v0.1` or `/v0.2` |
+| `schema` | yes | `taipanbox.dev/agent-event/v0.1`, `/v0.2` or `/v1.0`, which a consumer MUST accept; `/v0.3` stays live and MAY be refused (SPEC.md §6.4) |
 | `ts` | yes | RFC 3339, UTC |
 | `source` | yes | emitting product; closed enum in v0.1, open string (`minLength: 1`) in v0.2 |
 | `type` | yes | event type, open registry per source, additive without a schema bump |
-| `agent_id` | yes | `agent://` URI, opaque key |
+| `agent_id` | yes | `agent://` URI, opaque key; under v0.3 and v1.0 it may carry the `claimed:` form, which a consumer that does not model claims refuses and counts (SPEC.md §3.3, §6.4.1) |
 | `severity` | no | `info` · `low` · `medium` · `high` · `critical` |
 | `run_id` | no | task execution correlation ID |
 | `on_behalf_of` | no | delegation chain, root first |
@@ -322,9 +325,8 @@ hold has simply sat undecided: nothing decayed, nobody answered.
 
 The first four TokenFuse types are its existing incident taxonomy
 verbatim, zero renaming. Consumers MUST accept events whose `schema` is
-either `/v0.1` or `/v0.2`; existing emitters may keep emitting v0.1, new
-wave-2 services emit v0.2. The two versions differ only in the `source`
-field (SPEC.md §6.4).
+`/v0.1`, `/v0.2` or `/v1.0`; existing emitters may keep emitting the version
+they emit today and move to v1.0 at their own release (SPEC.md §6.4, §6.4.1).
 
 ### Conformance
 
@@ -342,12 +344,17 @@ IDs and events alone is already useful.
 ## Repo layout
 
 ```
-SPEC.md                              normative specification
-schemas/agent-passport.schema.json   JSON Schema (draft 2020-12) for §4
-schemas/agent-event.schema.json      JSON Schema (draft 2020-12) for §6, v0.1
-schemas/agent-event.v0.2.schema.json JSON Schema (draft 2020-12) for §6, v0.2
-examples/passport.json               example Passport document
-examples/events.ndjson               example events, one per emitting source
+SPEC.md                                   normative specification; §10 is what 1.0 freezes
+schemas/agent-passport.schema.json        JSON Schema (draft 2020-12) for §4, v0.1
+schemas/agent-passport.v1.0.schema.json   the same at v1.0, top level closed (§6.4.1)
+schemas/agent-event.schema.json           JSON Schema (draft 2020-12) for §6, v0.1
+schemas/agent-event.v0.2.schema.json      JSON Schema (draft 2020-12) for §6, v0.2
+schemas/agent-event.v0.3.schema.json      JSON Schema (draft 2020-12) for §6, v0.3
+schemas/agent-event.v1.0.schema.json      JSON Schema (draft 2020-12) for §6, v1.0
+examples/passport.json                    example Passport document, v0.1
+examples/passport.v1.0.json               the same document stamped v1.0
+examples/events.ndjson                    example events, every schema version exercised
+features/contract-1.0.feature             what 1.0 promises, each scenario bound to its gate
 ```
 
 ---
@@ -392,6 +399,7 @@ compatibility, and SPEC.md §9 for the per-repo adoption cost estimate.
 - [x] conformance criteria (SPEC.md §7) and resolved design decisions (SPEC.md §8)
 - [x] adopted across the original four (TokenFuse, Engram, Idryx, Qryx all shipped) plus wave-2 (Wardryx, Verdryx, Mockryx shipped)
 - [x] Qryx: emitting findings as agent-event (`internal/exporter`: `crypto_finding` / `crypto_drift` / `policy_violation` / `evidence_signed`, v0.1, `--events` flag)
+- [x] 1.0 (2026-09-12): the SPIFFE mapping normative (SPEC.md §3.4); envelope v1.0 as v0.3's shape and Passport v1.0 with a closed top level (§6.4.1); the frozen surface named (§10); both version chains held by one gate with the one major-boundary narrowing known by name
 - [x] a standalone conformance-check CLI/validator: `agent-conform` (`TAIPANBOX/agent-stack-go`'s `cmd/agent-conform`), full JSON Schema validation of Passport documents and agent-event v0.1/v0.2 streams against embedded copies of this repo's canonical schemas, and verifies event-stream `prev_hash` integrity chains (SPEC 6.5) with `agent-conform -chain <file>`
 
 ## License

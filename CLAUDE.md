@@ -11,8 +11,9 @@ things stand, read `VALIDATION.md` and the git tags.
    interlock: identity (3), the passport document (4), the delegation chain (5)
    and the event envelope (6) constrain each other, and 6.4 governs how any of
    them may change.
-2. `schemas/`. Four files: the passport schema, and the event schema at v0.1,
-   v0.2 and v0.3. These are the machine form of `SPEC.md`.
+2. `schemas/`. Six files: the passport schema at v0.1 and v1.0, and the event
+   schema at v0.1, v0.2, v0.3 and v1.0. These are the machine form of
+   `SPEC.md`. SPEC 10 says which of them are frozen and what a change costs.
 3. `examples/`. `passport.json` and `events.ndjson` are what CI validates.
 
 ## What this repo is
@@ -62,6 +63,7 @@ python .github/scripts/validate_examples.py
 ./scripts/providers-match-registry.sh
 ./scripts/runtimes-match-registry.sh
 ./scripts/attestation-methods-agree.sh
+./scripts/features-are-bound.sh
 ./scripts/gates-have-teeth.sh     # invariant 8; needs a clean tree and jsonschema
 ```
 
@@ -90,15 +92,19 @@ an absent invariant.
    a missing required `owner`, and a non-string `ts` on one line of
    `events.ndjson`. All three fail loudly with the offending path.
 
-   **Known limit, do not mistake this gate for more than it is.** The passport
-   schema leaves `additionalProperties` at its default of true, so an unknown
-   key passes silently. Writing `agent_id` where the field is `id` validates
-   clean, and the passport simply has no identifier as far as any consumer is
-   concerned. The gate catches malformed values, not misspelled field names.
-4. **Every event schema version stays live.** v0.1, v0.2 and v0.3 are all
-   valid input. Retiring one is a breaking change for every consumer that has
-   not migrated, and needs the user. *(partly gated: the validator covers
-   whichever versions the examples exercise, not the promise to keep them)*
+   **Known limit, do not mistake this gate for more than it is.** The v0.1
+   passport schema leaves `additionalProperties` at its default of true, so an
+   unknown key passes silently there. Writing `agent_id` where the field is
+   `id` validates clean under v0.1, and the passport simply has no identifier
+   as far as any consumer is concerned. v1.0 closes that (invariant 12); for a
+   v0.1 document the gate catches malformed values, not misspelled field names.
+4. **Every schema version stays live.** Event v0.1, v0.2, v0.3 and v1.0, and
+   Passport v0.1 and v1.0, are all valid input. Retiring one is a breaking
+   change for every consumer that has not migrated, and needs the user. From
+   1.0 a consumer MUST accept event v0.1, v0.2 and v1.0 and Passport v0.1 and
+   v1.0 (SPEC 6.4.1, 7). *(partly gated: the validator covers whichever
+   versions the examples exercise, and every version has an example today, not
+   the promise to keep them)*
 
    **Accepting v0.3 is the one asymmetry, and it is deliberate** (SPEC 6.4). A
    consumer MUST accept v0.1 and v0.2; it MAY refuse v0.3, because v0.3 is the
@@ -109,8 +115,13 @@ an absent invariant.
 5. **An optional field never quietly becomes required**, and more generally
    each version is a WIDENING of the one before it. Optionality is a compatibility promise under 6.4:
    a stream written by an older implementation must keep validating. Tightening
-   a constraint is a version bump.
-   *(gate: `scripts/version-compatibility.sh`)*
+   a constraint is a version bump. **Across a major, exactly one narrowing is
+   allowed and SPEC 6.4.1 names it**: the Passport's top level closes. The gate
+   knows that one by name, refuses it inside a major, and refuses any other
+   narrowing across one; both chains, event and Passport, are walked.
+   *(gate: `scripts/version-compatibility.sh`; four cases in
+   `gates-have-teeth.sh` for the 1.0 shape: the top level closed inside a major,
+   another bound tightened across it, and the two non-faults)*
 6. **Reserved conventions stay reserved.** `labels.version` (4.6) and
    `AGENT_PASSPORT_ID` (3.3) are reserved precisely so nobody redefines them
    locally. Adding a new reserved convention is a spec decision.
@@ -299,14 +310,14 @@ actually changed.** Comparing bounds in isolation reported `source` as
 non-empty and every one still passes. A bound is not a narrowing if the old
 schema was narrower by another means.
 
-**Separately, the `additionalProperties` question is open and is a real hole.**
-Today a misspelled field name validates clean (see invariant 3). Setting
-`additionalProperties: false` would close it, but it also forbids forward
-compatibility: an older validator would then reject a document carrying a field
-added in a later version, which is the opposite of what 6.4 promises. The
-middle path is to keep the schema permissive and have the validator warn on
-unknown keys in `examples/` only, since our own examples have no reason to
-carry one. That is a decision for the user, not a fix to apply quietly.
+**The `additionalProperties` hole is closed at v1.0 and stays open at v0.1, by
+decision (SPEC 8.1, 2026-09-12).** A v1.0 Passport with a key the schema never
+named does not validate (invariant 12). v0.1 keeps its default, because every
+document written against it was valid when written and 6.4.1 promises they
+still are. The forward-compatibility objection this paragraph used to carry
+does not survive the `const`: a v1.0 validator already refuses a v1.1 document
+by its version string, so closing the top level costs nothing the version did
+not already cost.
 
 Invariant 7 is `scripts/artifacts-match-registry.sh`, and it exists because the
 two checks above cannot see the registry at all. They compare schema with prose
@@ -337,6 +348,23 @@ that describes what a table means. In the diagrams the gate judges attribution,
 not direction, because nothing in an SVG says which box is a producer.
 
 Invariants 1 and 6 are judgement and stay judgement.
+
+12. **A Passport stamped v1.0 with a key the schema never named does not
+    validate.** SPEC 6.4.1's one narrowing, and the reason it exists: `agent_id`
+    written where the field is `id` used to validate as a passport with no
+    identifier. v0.1 keeps its hole by decision, so the same key on a v0.1
+    document is NOT a fault. *(gate: `.github/scripts/validate_examples.py`,
+    which validates every `examples/passport*.json` against the schema its own
+    `schema` field names; two cases in `gates-have-teeth.sh`, the key planted
+    on the v1.0 example must fail and on the v0.1 example must pass)*
+
+13. **Every scenario in `features/` names a gate that exists, and every
+    scenario names one at all.** This repository has no test suite to bind a
+    scenario to, so the binding is to the gate that holds the promise; the
+    scenario is what a reader reads instead of the script. *(gate:
+    `scripts/features-are-bound.sh`; three cases in `gates-have-teeth.sh`: a
+    scenario with no binding, a binding to a script that does not exist, and
+    the directory taken away)*
 
 ## Standing rule
 

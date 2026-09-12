@@ -1,8 +1,8 @@
 # Agent Passport: shared identity & event schema
 
-**Version:** 0.1 · 2026-07-09
-**Status:** accepted (design decisions resolved 2026-07-09), adoption in progress across all seven services; see README.md's adoption-status table for current per-repo detail
-**Scope:** TokenFuse · Engram · Idryx · Qryx · Wardryx · Verdryx · Mockryx (the TAIPANBOX agent-governance stack)
+**Version:** 1.0 · 2026-09-12 (0.1 was 2026-07-09; what 1.0 freezes is section 10, what it changed is 6.4.1)
+**Status:** accepted (design decisions resolved 2026-07-09, the 1.0 decisions in 8.1); adoption per source is the 6.2 registry, which is gated, not this line
+**Scope:** the TAIPANBOX agent-governance services registered in 6.2, and the bindings that vendor these schemas (agent-stack-go in Go; TokenFuse in Rust; Engram and Verdryx in Python)
 
 ---
 
@@ -178,6 +178,39 @@ read as one, and this is a qualifier on an `agent://` ID rather than a new
 scheme. The inner ID keeps §3.1's grammar exactly, so a value that would not be
 a valid agent ID is not made valid by being claimed.
 
+### 3.4 The SPIFFE mapping (normative from 1.0)
+
+3.1 has said since v0.1 that the mapping to a SPIFFE ID is mechanical. From
+1.0 it is a rule rather than an observation, because the platforms agents run
+on now issue SPIFFE identities to agents as a first-class principal, and a
+consumer meeting both forms must know they name one workload. @decided
+2026-09-12: the identifier the platforms converged on is SPIFFE and the
+delegation model is OAuth token exchange with proof of possession; this
+specification keeps `agent://` and states the mapping instead of renaming,
+so nothing on the wire moves.
+
+```
+agent://<trust-domain>/<path>   <->   spiffe://<trust-domain>/agent/<path>
+```
+
+- The trust domain is the SPIFFE trust domain, byte for byte and lowercase. A
+  consumer that keys on the trust domain (the record plane does) treats the
+  two forms as one key.
+- The first path segment `agent` is reserved by this mapping. A SPIFFE ID
+  under `/agent/` maps to an agent id and back; a SPIFFE ID under any other
+  first segment names a workload this specification does not call an agent,
+  and a consumer MUST NOT map it by guessing.
+- 3.1's grammar is lowercase and SPIFFE's path grammar is not. A SPIFFE ID
+  carrying an uppercase byte in its path is not mappable; a consumer MUST NOT
+  lowercase it to make it fit, because two SPIFFE IDs that differ in case are
+  two workloads.
+- `user://` has no SPIFFE form. Humans are not workloads, and 8.2 is why they
+  are in the chain at all.
+- An organisation that issues SVIDs records `attestation.method: spiffe-svid`
+  with the SPIFFE ID in `attestation.detail` (4.3), exactly as v0.1 already
+  allowed. Deriving the Passport ID from the SVID, which 3.1 says such an
+  organisation SHOULD do, is this mapping run backwards.
+
 ## 4. The Passport document
 
 A Passport is a small JSON document describing one agent. It lives wherever
@@ -227,6 +260,17 @@ Idryx SHOULD surface `attestation: none` on privileged agents as a finding.
 every request, per RFC 9449, and the key's RFC 7638 thumbprint is what a
 delegation is bound to (§5.2). It is the same family as `mtls-cert` and
 `enclave-key`: the workload holds something, and holding it is the binding.
+
+**Where the methods meet the platforms (informative, from 1.0).** A cloud
+provider's agent identity is an attestation SOURCE and not a new method. A
+Google Cloud Agent Identity is a SPIFFE identity and is recorded as
+`spiffe-svid`; a Microsoft Entra Agent ID authenticates an agent as a
+confidential OAuth client and is recorded as `oidc`, with the issuer in
+`detail`; a workload that presents a client certificate is `mtls-cert`; one
+that proves possession of a key on every request is `dpop-key`. An A2A Agent
+Card describes a peer's endpoint and schemes and is not an attestation of this
+agent. The enum did not grow for 1.0 (8.1): every platform named here binds a
+name to a workload by one of the six mechanisms already listed.
 
 It is deliberately NOT called after any product. An attestation method names a
 MECHANISM an org can implement with whatever it likes; a value named after a
@@ -635,6 +679,14 @@ together and adds no requirement to either; it is written out because both
 implementations of the mapping in this estate read it the other way on
 2026-08-27, and a token carrying 32 actors verified at the door while every
 record it produced was quarantined.
+
+**The cross-application case is the same mapping.** Where an application
+obtains a token for a third-party API through an identity provider both sides
+already trust for sign-on (the OAuth working group's identity assertion
+authorization grant, the pattern its vendors call cross-app access), the token
+it ends up holding is an RFC 8693 exchange, its `act` claim nests exactly as
+above, and the chain is built by the same rule. Nothing in this section is
+different for it.
 
 ### 5.1 Cycle safety (normative)
 
@@ -1213,6 +1265,54 @@ whoever made that change had to be reminded to come back here again. The
 registry is gated; this sentence is prose about the registry, and prose about
 a gated thing is the part that drifts.
 
+### 6.4.1 What 1.0 changes, and what it does not (2026-09-12)
+
+`taipanbox.dev/agent-event/v1.0` (`schemas/agent-event.v1.0.schema.json`) is
+v0.3's shape with the version string changed: every field, every bound and the
+`claimed:` form of `agent_id` are identical, so every v0.3 event validates
+under v1.0 with only its version string swapped, and so does every v0.2 and
+v0.1 event through the pairs before it, which `scripts/version-compatibility.sh`
+holds.
+
+From 1.0:
+
+- **Consumers MUST accept `v0.1`, `v0.2` and `v1.0`.** `v0.3` stays live
+  (every version does) and a consumer MAY still refuse it, for the reason 6.4
+  gives.
+- **The refusal a consumer owes moves from the version to the subject.** A
+  consumer that has not decided what a claimed subject means to it MUST
+  refuse, and count, an event whose `agent_id` carries `claimed:`, whatever
+  version stamped the event, and MUST NOT strip the prefix (3.3). Under v0.3
+  the version carried that signal; under v1.0 the in-band marker carries it
+  alone, which is what 3.3 argued a marker inside the identifier can do and a
+  sibling field cannot.
+- **A producer stamps `v1.0` from the release in which it adopts this
+  section, on every event**, whether or not the subject is claimed. The v0.3
+  rule that forbade stamping it on an established subject does not carry over:
+  that rule existed so an unupdated consumer would refuse by version, and 1.0
+  is the point at which every consumer has updated.
+- **The Passport document gains `taipanbox.dev/agent-passport/v1.0`**
+  (`schemas/agent-passport.v1.0.schema.json`), identical to v0.1 except that a
+  key the schema never named does not validate: `additionalProperties` is
+  `false` at the document's top level and nowhere else. Every v0.1 document
+  without such a key validates under v1.0 with its version string swapped. A
+  consumer MUST accept both versions; a producer moves at its own release. The
+  objection recorded against closing the top level, that an older validator
+  would then reject a document carrying a field a later version adds, does not
+  survive the `const`: a v1.0 validator already refuses a v1.1 document by its
+  version string, so strictness costs nothing the version did not already
+  cost, and what it buys is that `agent_id` written where the field is `id`
+  stops validating as a passport with no identifier.
+- **This is the one narrowing a major may make**, and the gate knows it by
+  name: inside a major it is refused like any other narrowing, and across a
+  major any narrowing other than this one is refused too.
+
+What did not change: no field was added, removed or renamed in either
+document; the three registries (4.7, 4.8, 6.2) stay additive; the depth cap,
+the chain rules, the attestation enum and the `prev_hash` canonicalization are
+as they were. Section 10 says which of these are frozen and what a change to
+them costs.
+
 ### 6.5 `prev_hash` canonicalization
 
 Where present, `prev_hash` MUST be computed as:
@@ -1225,7 +1325,7 @@ where `C` is the RFC 8785 (JSON Canonicalization Scheme, JCS) canonical
 serialization of the event object with the `prev_hash` field itself
 removed. Format: `^sha256:[0-9a-f]{64}$`.
 
-## 7. Conformance (v0.1)
+## 7. Conformance
 
 A product is Passport-aware when it:
 
@@ -1234,6 +1334,10 @@ A product is Passport-aware when it:
 2. Emits its agent-relevant events in the §6 envelope (natively or via an
    exporter).
 3. Propagates `on_behalf_of` without truncation where it forwards requests.
+4. From 1.0: accepts events stamped `v0.1`, `v0.2` and `v1.0`, and refuses and
+   counts a claimed subject it does not model (6.4.1).
+5. From 1.0, if it reads Passport documents at all: accepts documents stamped
+   `v0.1` and `v1.0`.
 
 Deliberately *not* required: reading Passport documents (§4) — a consumer of
 IDs and events alone is already useful.
@@ -1252,6 +1356,25 @@ IDs and events alone is already useful.
    `taipanbox.dev/agent-passport/v0.1` and `taipanbox.dev/agent-event/v0.1`
    are final for v0.1.
 
+### 8.1 Decisions at 1.0 (2026-09-12)
+
+5. **Freeze rather than rename.** The platforms converged on SPIFFE for the
+   identifier and on RFC 8693 with proof of possession for delegation;
+   `agent://` is SPIFFE-shaped and the chain already maps to `act`. 3.4 makes
+   the mapping normative; nothing on the wire moves. (@decided 2026-09-12)
+6. **v1.0 of the envelope is v0.3's shape.** The signal a consumer needs about
+   a claimed subject moves from the version to the subject (6.4.1).
+7. **The Passport closes its top level.** A misspelled key stops validating,
+   and the forward-compatibility objection does not survive the `const`
+   (6.4.1). (@decided 2026-09-12)
+8. **The attestation enum did not grow.** Every platform identity named in 4.3
+   is one of the six mechanisms already listed; a seventh is a minor schema
+   version when one is needed (10).
+9. **Both chains are held by one gate.** `scripts/version-compatibility.sh`
+   walks the event chain and the Passport chain and knows the one narrowing a
+   major may make; `scripts/gates-have-teeth.sh` plants that narrowing inside a
+   major and another one across it, and requires both refused.
+
 ## 9. Adoption cost estimate (per repo)
 
 | Repo | Work | Size | Status (2026-07-09) |
@@ -1263,3 +1386,40 @@ IDs and events alone is already useful.
 
 No step blocks any other; TokenFuse exporter + Idryx connector is the pair
 that proves the whole idea.
+
+## 10. What 1.0 promises
+
+Version 1.0 defines the public surface of this specification. After it, a
+change to anything in the first list is a new major version, and a consumer
+that pins a `schema` string keeps validating what it validated the day it
+pinned it.
+
+**Frozen:** the identifier grammar (3.1) and the SPIFFE mapping (3.4); the
+`claimed:` form and its reading (3.3); the Passport document's fields and its
+required set (4, 4.1) and the `attestation.method` enum (4.3); the delegation
+chain's order, cycle rule and depth cap (5, 5.1), the `delegation_proof` shape
+(5.2) and the RFC 8693 mapping (5.3); the envelope's fields, its required set,
+the `agent_id` grammar and the `prev_hash` canonicalization (6, 6.1, 6.5); and
+what every `schema` string this repository carries validates.
+
+**Additive within 1.x:** a row appended to a registry (4.7, 4.8, 6.2), which
+is never renamed or removed; a new optional field on either document, which
+arrives as a new minor schema version (`v1.1`) with its own `schema` string
+and which every 1.x consumer accepts by the rule of 6.4; a new attestation
+method, which is also a minor schema version, because a consumer acts on it
+(4.3) and cannot judge one it does not know.
+
+**Never within 1.x:** removing or renaming a field, making an optional field
+required, narrowing a pattern, a bound or an enum, retiring a schema version,
+or changing what an existing `schema` string validates.
+
+**Support:** the newest minor gets every fix; the previous minor gets
+security-relevant fixes for 90 days after the newer one is tagged. A consumer
+pins a `schema` string, never a moving name.
+
+**Held by:** `scripts/version-compatibility.sh` (each version widens the one
+before it; across a major, the one narrowing 6.4.1 names and no other), the
+validator (`.github/scripts/validate_examples.py`), and
+`scripts/gates-have-teeth.sh`, which plants each of these faults and requires
+the gate to catch it. The scenarios a reader can check instead of the scripts
+are in `features/contract-1.0.feature`, each bound to the gate that holds it.

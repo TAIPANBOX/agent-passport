@@ -786,7 +786,7 @@ self-protection, not third-party or adversarial traffic.
 
 | `source` | `type` values |
 |---|---|
-| `tokenfuse` | `budget_exhausted` · `sustained_loop` · `spend_spike` · `fanout_explosion` · `breaker_tripped` (medium) · `dlp_block` · `taint_block` · `mcp_drift` · `identity_mismatch` (high) · `tool_call` (low) · `budget_threshold` (medium) · `run_killed` (high) · `unit_cap_exceeded` (high) · `policy_deny` (high) · `dependency_failed` (high) · `taint_shadow` (medium) · `taint_raised` (low) · `taint_cleared` (high) |
+| `tokenfuse` | `budget_exhausted` · `sustained_loop` · `spend_spike` · `fanout_explosion` · `breaker_tripped` (medium) · `dlp_block` · `taint_block` · `mcp_drift` · `identity_mismatch` (high) · `tool_call` (low) · `budget_threshold` (medium) · `run_killed` (high) · `unit_cap_exceeded` (high) · `policy_deny` (high) · `dependency_failed` (high) · `taint_shadow` (medium) · `taint_raised` (low) · `taint_cleared` (high) · `breaker_shadow` (medium) |
 | `engram` | `memory_written` · `reflection_run` · `contradiction_found` · `memory_forgotten` |
 | `idryx` | `identity_finding` (severity per finding) |
 | `qryx` | `crypto_finding` · `crypto_drift` · `policy_violation` · `evidence_signed` |
@@ -1046,6 +1046,21 @@ severity chosen at the emission site, which §6.2 forbids everywhere: it is two
 types, fixed at `medium` and `high`, for two facts that genuinely differ in
 what happened. Naming them one type would have forced one band on both, and
 whichever band was picked would have been wrong for the other half.
+
+**`breaker_shadow` (medium)** is the Breaker's own shadow finding (@decided
+2026-09-13), `taint_shadow`'s shape applied to the budget. `TOKENFUSE_MODE`
+defaults to shadow, and until this type existed a call the run budget would
+have refused was forwarded with no event at all: the exporter had nothing to
+say, and a shadow week read as a week of allows. `data` is `breaker_tripped`'s
+(`reason`, `budget_usd`, `spent_usd`, `policy_id`, `detail`, `unit`) plus
+`mode` (`shadow` or `warn`): one shape for a shadow week and an enforce week,
+and a separate TYPE, so a consumer counting refusals never counts a forwarded
+call. The band is `breaker_tripped`'s own rather than one below as with the
+taint pair: `breaker_tripped` sits at `medium` since 2026-08-03, the money in a
+shadow finding was actually spent so it is not `low`, and `high` would page on
+the default mode's ordinary week. On a replicated ledger the finding names the
+own run and its ancestors from a local read and is advisory; the enforce
+refusal is the decision.
 
 `taint_cleared` is the first type in this registry that records a control being
 LIFTED rather than applied, and the band is the whole of it.

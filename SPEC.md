@@ -958,11 +958,17 @@ rather than from its docs. `data` carries four members. `dependency` is which
 of TokenFuse's own dependencies died: `provider`, the model API the gateway
 proxies to, or `policy_plane`, the evaluator it asks for a decision before the
 call. `stage` is how far the attempt had got, `send`, `stream`,
-`response_body` or `decide`. `effect` is what the failure did to the call, and
-it has its own paragraph below. `detail` is the transport error's own text,
-short and capped, and it is there for a person to read rather than for a
-consumer to parse: it is written by somebody else's client library and its
-wording is not a contract.
+`response_body`, `response` or `decide`; `response` (tokenfuse 1.0.1,
+2026-09-14) is the answer arriving and being a refusal, a status the gateway
+counts as the provider's own failure (a 429, a 5xx, a retired model id
+answered 404 or 400), which until then produced nothing on the bus while the
+caller saw the status and the ledger settled what the provider reported
+generating. A consumer that does not know a stage keeps its neutral wording
+for it, the way heraldyx does. `effect` is what the failure did to the call,
+and it has its own paragraph below. `detail` is the transport error's own
+text, or for a refusal the status and the model id, short and capped, and it
+is there for a person to read rather than for a consumer to parse: it is
+written by somebody else's client library and its wording is not a contract.
 
 **One type carrying the dependency in `data`, rather than one type per
 dependency, and the precedent is the `idryx` row above.** idryx registers one

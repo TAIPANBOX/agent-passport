@@ -786,7 +786,7 @@ self-protection, not third-party or adversarial traffic.
 
 | `source` | `type` values |
 |---|---|
-| `tokenfuse` | `budget_exhausted` · `sustained_loop` · `spend_spike` · `fanout_explosion` · `breaker_tripped` (medium) · `dlp_block` · `taint_block` · `mcp_drift` · `identity_mismatch` (high) · `tool_call` (low) · `budget_threshold` (medium) · `run_killed` (high) · `unit_cap_exceeded` (high) · `policy_deny` (high) · `dependency_failed` (high) · `taint_shadow` (medium) · `taint_raised` (low) · `taint_cleared` (high) · `breaker_shadow` (medium) |
+| `tokenfuse` | `budget_exhausted` · `sustained_loop` · `spend_spike` · `fanout_explosion` · `breaker_tripped` (medium) · `dlp_block` · `taint_block` · `mcp_drift` · `identity_mismatch` (high) · `tool_call` (low) · `budget_threshold` (medium) · `run_killed` (high) · `unit_cap_exceeded` (high) · `policy_deny` (high) · `dependency_failed` (high) · `taint_shadow` (medium) · `taint_raised` (low) · `taint_cleared` (high) · `breaker_shadow` (medium) · `run_stalled` (medium) |
 | `engram` | `memory_written` · `reflection_run` · `contradiction_found` · `memory_forgotten` |
 | `idryx` | `identity_finding` (severity per finding) |
 | `qryx` | `crypto_finding` · `crypto_drift` · `policy_violation` · `evidence_signed` |
@@ -1067,6 +1067,28 @@ shadow finding was actually spent so it is not `low`, and `high` would page on
 the default mode's ordinary week. On a replicated ledger the finding names the
 own run and its ancestors from a local read and is advisory; the enforce
 refusal is the decision.
+
+**`run_stalled` (medium)** is the control plane's finding that a run stopped
+calling (@decided 2026-09-18): a run `tokenfuse-cloud` had seen calling at a
+cadence, at least two calls, not killed, its newest call neither refused nor
+tagged with an outcome, has made no call for `TOKENFUSE_CLOUD_STALL_MINUTES`
+(default 5, `0` off) and for longer than its own longest gap between calls. It
+is the first `tokenfuse` type raised on ABSENCE: every other detector fires
+when a record arrives, and a node killed mid-run produced no record, no event
+and a stale last-seen time on the console (tokenfuse#296, measured 2026-09-17
+on the appliance proving run). Raised once per run, on the transition into
+silence, by a periodic sweep in the Cloud and not by the gateway; never
+repeated while the silence holds and never re-raised when the run moves again,
+because the incident on the console is the record. Envelope: `agent_id` (the
+run's attributed agent; an unattributed run is skipped and counted, never
+invented) and `run_id`. `data`: `org`, `occurrences`, `last_call_millis`,
+`silence_ms`, `stall_after_ms`, `longest_gap_ms`, `calls`, `steps`. `medium`,
+fixed: the Cloud cannot tell a dead node from a long generation or from a run
+that ended without saying so, and a run that ends silently is reported exactly
+once after the floor plus its own longest gap; the sentence a notifier writes
+is "agent X went quiet on run Y, last call at T, silent for S", which asks a
+person to look, not to act, and `high` would page on every run that finishes
+without an outcome tag.
 
 `taint_cleared` is the first type in this registry that records a control being
 LIFTED rather than applied, and the band is the whole of it.

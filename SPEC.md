@@ -777,6 +777,7 @@ Registered sources today:
 | `scopyx` | web-egress enforcement (agents fetch through it) |
 | `vouchryx` | delegation issue and revocation (RFC 8693 token exchange) |
 | `costcrew` | FinOps console, agent-staffed. A guest producer: it writes and calls nobody |
+| `typryx` | typed answers with a probability, an optional add-on (it writes and calls nobody else in the stack) |
 
 wardryx, verdryx, and mockryx are wave-2 services; like the original four,
 this contract governs an operator's own agents, for the operator's own
@@ -798,12 +799,22 @@ self-protection, not third-party or adversarial traffic.
 | `vouchryx` | `delegation_issued` (info) · `delegation_denied` (high) · `delegation_revoked` (high) |
 | `scopyx` | `web_fetch` (low) · `web_blocked` (high) |
 | `costcrew` | `spend_spike` (low to critical, by excess) · `budget_threshold` (low to high, by how far past) · `anomaly_triaged` · `anomaly_explained` · `anomaly_accepted` · `anomaly_dismissed` (all low to critical, by excess) · `budgets_set` · `forecast_frozen` · `explainer_published` · `sprint_planned` · `agent_hired` · `agent_rebriefed` · `agent_removed` · `agent_transferred` (all info) · `agent_state_changed` (info, high when the state is not active) · `generated_estate_replaced` (info: a person replaced the generated estate with real charges through a connector; the event names the tables it emptied) · `option_refused` (warn: a deliverable's options named a decision outside the writing role's job, or the block was malformed; it was saved without them and returned with the reason) · `option_applied` (info: a stamp, the supervisor's own or an owner's, applied one option of a deliverable) · `decision_requested` (info: the supervisor's pass sent one owner one sprint's options that its job hands upward; it names a date after which it counts as lapsed, and nothing enforces that date) · `cadence_set` (info: a person changed the console's cadence switch and its ceiling on the /cadence page; that switch is what the runner's -due mode reads before it will spend anything on a clock, and nothing runs because of this event by itself) · `crew_ran` (info: one clock-driven -due -live run of the crew finished, naming the sprint, tasks run, tasks refused before any call, the cost in micro-dollars summed once and the ceiling it was held to; nothing is enforced by it, it records what was spent) · `plan_asked` (info: a person asked the supervisor to plan the next sprint with a model, beside the deterministic plan; the call is priced first and refused, before it is made, over the supervisor's own per-task guard or with no gateway configured; the event carries the outcome, the cost in micro-dollars, the sprint and who asked; a person still approves one of the two plans, and nothing runs on a clock because of it) |
+| `typryx` | `typed_answer` (info) · `typed_unanswered` (medium) · `typed_refused` (high) · `calibration_drift` (high) |
 
 
 A row here is a CLAIM that the source writes those types into this envelope
 today, not a list of what it detects or intends to. Checked against every
 producer's code on 2026-08-03, which is when this table stopped being partly
 aspirational:
+
+- **`typryx`, registered 2026-09-25, is an optional add-on**: a stack that
+  did not ask for it emits none of these four. `typed_answer` is written when
+  a typed question (a choice, a score or a yes/no) is answered with a
+  probability, `typed_unanswered` when a model backend was reached and gave
+  no usable answer, `typed_refused` when the ask never reached a backend, and
+  `calibration_drift` by its calibration command when one group of answers
+  crosses a configured bound. The severities are fixed in its code, one per
+  type, never chosen at the call site.
 
 - **`idryx` emitted nothing into this envelope until 2026-08-10**, and the
   seven names reserved for it were wrong in both directions. It shipped 25

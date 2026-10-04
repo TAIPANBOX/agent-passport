@@ -60,3 +60,9 @@ Feature: Release 1.0 marks a surface that has run, and keeps what 0.x accepted
     When every declared property name is looked up in SPEC.md
     Then each one appears there
     # @gate: scripts/schema-matches-spec.sh
+
+  Scenario: a row appended to the 6.2 registry is additive and must reach README's copy of the table
+    Given a source registered in SPEC 6.2 with the event types it writes
+    When README's copy of the table, the examples and the diagrams are read against it
+    Then each type is in the same row in both tables, and a producer a row does not name is refused
+    # @gate: scripts/artifacts-match-registry.sh

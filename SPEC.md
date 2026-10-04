@@ -825,7 +825,9 @@ aspirational:
   `agent-conform.ndjson`, as schema `taipanbox.dev/agent-event/v1.0` events
   with `source` `agent-conform`, `agent_id`
   `agent://agent-conform.internal/verifier`, and a `prev_hash` chain of its
-  own. It writes no other file on the bus. `chain_broken` is written when a
+  own. It writes no other event stream (a small state file of its
+  own, which is not a stream, remembers what it has already announced).
+  `chain_broken` is written when a
   stream's `prev_hash` does not match the hash of the line before it, once per
   file, line and kind, naming the FIRST such line; its `data` carries `file`
   (the stream's base name), `line` (1-based, the first break), `kind` (always

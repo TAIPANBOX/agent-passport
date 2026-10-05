@@ -385,8 +385,9 @@ from this repo._
 | Mockryx | shipped | wave-2 service; simulation and blast-radius testing, event schema v0.2 |
 
 Event schema v0.2 (`schemas/agent-event.v0.2.schema.json`) opens the
-`source` field to any string and adds the wave-2 event types; the
-Passport schema is unchanged at v0.1. See SPEC.md §6.4 for versioning and
+`source` field to any string and adds the wave-2 event types; v0.3 adds
+the `claimed:` form of `agent_id`, and 1.0 adds event v1.0 and Passport
+v1.0 (SPEC.md §6.4.1). See SPEC.md §6.4 for versioning and
 compatibility, and SPEC.md §9 for the per-repo adoption cost estimate.
 
 ---
@@ -397,12 +398,12 @@ compatibility, and SPEC.md §9 for the per-repo adoption cost estimate.
 - [x] symmetric `user://` principal form for the delegation chain (SPEC.md §8.2)
 - [x] Passport document schema v0.1, required + optional fields (SPEC.md §4, `schemas/agent-passport.schema.json`)
 - [x] ordered, cycle-safe delegation chain, max depth 32 (SPEC.md §5, §5.1)
-- [x] event envelope schema v0.1 and v0.2, `prev_hash` hash-chain canonicalization (SPEC.md §6, `schemas/agent-event*.schema.json`)
+- [x] event envelope schema v0.1, v0.2, v0.3 and v1.0, `prev_hash` hash-chain canonicalization (SPEC.md §6, `schemas/agent-event*.schema.json`)
 - [x] conformance criteria (SPEC.md §7) and resolved design decisions (SPEC.md §8)
 - [x] adopted across the original four (TokenFuse, Engram, Idryx, Qryx all shipped) plus wave-2 (Wardryx, Verdryx, Mockryx shipped)
 - [x] Qryx: emitting findings as agent-event (`internal/exporter`: `crypto_finding` / `crypto_drift` / `policy_violation` / `evidence_signed`, v0.1, `--events` flag)
 - [x] 1.0 (2026-09-12): the SPIFFE mapping normative (SPEC.md §3.4); envelope v1.0 as v0.3's shape and Passport v1.0 with a closed top level (§6.4.1); the frozen surface named (§10); both version chains held by one gate with the one major-boundary narrowing known by name
-- [x] a standalone conformance-check CLI/validator: `agent-conform` (`TAIPANBOX/agent-stack-go`'s `cmd/agent-conform`), full JSON Schema validation of Passport documents and agent-event v0.1/v0.2 streams against embedded copies of this repo's canonical schemas, and verifies event-stream `prev_hash` integrity chains (SPEC 6.5) with `agent-conform -chain <file>`
+- [x] a standalone conformance-check CLI/validator: `agent-conform` (`TAIPANBOX/agent-stack-go`'s `cmd/agent-conform`), full JSON Schema validation of Passport documents (v0.1, v1.0) and agent-event streams (v0.1, v0.2, v0.3, v1.0) against embedded copies of this repo's canonical schemas, and verifies event-stream `prev_hash` integrity chains (SPEC 6.5) with `agent-conform -chain <file>`; `agent-conform watch-dir` is the on-box verifier that alerts on a chain break
 
 ## License
 

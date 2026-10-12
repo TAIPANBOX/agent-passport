@@ -788,7 +788,7 @@ self-protection, not third-party or adversarial traffic.
 
 | `source` | `type` values |
 |---|---|
-| `tokenfuse` | `budget_exhausted` · `sustained_loop` · `spend_spike` · `fanout_explosion` · `breaker_tripped` (medium) · `dlp_block` · `taint_block` · `mcp_drift` · `identity_mismatch` (high) · `tool_call` (low) · `budget_threshold` (medium) · `run_killed` (high) · `unit_cap_exceeded` (high) · `policy_deny` (high) · `dependency_failed` (high) · `taint_shadow` (medium) · `taint_raised` (low) · `taint_cleared` (high) · `breaker_shadow` (medium) · `run_stalled` (medium) |
+| `tokenfuse` | `budget_exhausted` · `sustained_loop` · `spend_spike` · `fanout_explosion` · `breaker_tripped` (medium) · `dlp_block` · `taint_block` · `mcp_drift` · `identity_mismatch` (high) · `tool_call` (low) · `budget_threshold` (medium) · `run_killed` (high) · `unit_cap_exceeded` (high) · `policy_deny` (high) · `dependency_failed` (high) · `taint_shadow` (medium) · `taint_raised` (low) · `taint_cleared` (high) · `breaker_shadow` (medium) · `run_stalled` (medium) · `call_retained` (medium) · `retained_closed` (high) |
 | `engram` | `memory_written` · `reflection_run` · `contradiction_found` · `memory_forgotten` |
 | `idryx` | `identity_finding` (severity per finding) |
 | `qryx` | `crypto_finding` · `crypto_drift` · `policy_violation` · `evidence_signed` |
@@ -1131,6 +1131,50 @@ once after the floor plus its own longest gap; the sentence a notifier writes
 is "agent X went quiet on run Y, last call at T, silent for S", which asks a
 person to look, not to act, and `high` would page on every run that finishes
 without an outcome tag.
+
+**`call_retained` (medium)** is the gateway's report that a call's outcome
+became unknown and its money stays reserved (@decided 2026-10-12). A call
+handed to the provider that ended before any answer came back, because the
+caller left while the provider held the request or the connection broke after
+the request was sent, is neither settled nor released: TokenFuse keeps its run
+and unit reservations outstanding until a person closes them with evidence
+(tokenfuse invariants 50 and 88). Until this type existed that was a warning
+line in the gateway's log and a count on its runs endpoint, so nobody was told
+that money was waiting for a person. Raised once per reservation, when it is
+retained; a restart that restores the reservation from the gateway's journal
+does not raise it again. Envelope: `agent_id` (the call's agent; a call that
+named none is skipped and counted, never invented), `run_id`, and the call's
+`on_behalf_of` as the gateway's other events carry it. `data`:
+`reservation_id`, `amount_microusd`, `unit` (absent when the call charged no
+unit), `model`, `journaled` (whether the reservation reached the gateway's
+journal and so survives a restart) and `listed` (whether it is on the list a
+closure is made from; past the list's cap the money is still held but cannot
+be closed there). `medium`, fixed: the sentence a notifier writes is "a call by
+agent X on run Y was sent and never answered; Z stays reserved until a person
+closes it", which asks a person to act soon rather than now, and `high` would
+page on every client that gave up mid-call.
+
+**`retained_closed` (high)** is a person closing a retained reservation with
+evidence (@decided 2026-10-12), the money-plane counterpart of
+`taint_cleared` below and banded the same way for the same reason: it is a
+control being lifted, an amount that was held being settled or released on a
+person's word. The person acts in the operator console, after a passkey
+assertion, and the console mints a short-lived token the gateway verifies
+(tokenfuse invariant 89, Genaryx invariant 22); the gateway raises this type
+once per closure it applies, never for a refused attempt and never for a retry
+of an operation already applied. Envelope: `agent_id` (the agent of the call
+whose reservation it was, from the gateway's journal; a record that names none
+is skipped and counted) and `run_id`. `data`: `reservation_id`, `revision`
+(the journal record's revision the closure was made against),
+`operation_id`, `evidence_kind` (`observed` or `no_charge`),
+`settled_microusd` (the amount charged, `0` for `no_charge`), `evidence_ref`
+(the person's reference to the evidence, at most 512 bytes, written by a
+person and not a contract) and `unit`. **Who closed it is not here, and that
+is a boundary rather than an omission:** the gateway verifies a token, not a
+person, so the human's principal lives in the console's own `console_command`
+(`data.action` `console.close_retained`, `on_behalf_of` the operator,
+`sig_alg` the passkey's), and a consumer joining the two reads them by
+`reservation_id`.
 
 `taint_cleared` is the first type in this registry that records a control being
 LIFTED rather than applied, and the band is the whole of it.

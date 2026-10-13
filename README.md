@@ -10,7 +10,7 @@
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)
 ![Status](https://img.shields.io/badge/status-accepted-success.svg)
 
-<img src="docs/architecture.png" alt="agent-passport architecture: eight TAIPANBOX services (TokenFuse, Wardryx, Engram, Idryx, Qryx, Verdryx, Mockryx, Heraldyx), six of which emit into the agent-event bus while Idryx and Heraldyx only read it, all governed by the agent-passport spec, which yields three artifacts: the agent:// identifier, the Agent Passport document, and the agent-event envelope" width="960">
+<img src="docs/architecture.png" alt="agent-passport architecture: eight TAIPANBOX services (TokenFuse, Wardryx, Engram, Idryx, Qryx, Verdryx, Mockryx, Heraldyx), where Idryx both reads and writes the agent-event bus and Heraldyx only reads it, all governed by the agent-passport spec, which yields three artifacts: the agent:// identifier, the Agent Passport document, and the agent-event envelope" width="960">
 
 </div>
 
@@ -124,7 +124,7 @@ Run the whole open stack locally with one command via [**stack-up**](https://git
 
 Agent Passport has no dashboard of its own - but its envelope and delegation-chain format was
 load-bearing in every live infrastructure campaign run across the stack before public launch, including
-under a 34-agent concurrent burst on a real raft-replicated gateway.
+under 34 agents at once on a real raft-replicated gateway (recorded in VALIDATION.md).
 
 Full write-up: [`VALIDATION.md`](VALIDATION.md).
 
@@ -314,10 +314,7 @@ journal directly, file to file, not through this bus. SPEC.md §6.2 carries
 the detail, including exactly what `data` holds.
 
 A row is a claim that the source writes those types into this envelope **today**,
-not a list of what it detects or means to. Idryx is the one row that is not:
-its detections leave by OTLP and by Slack, so all seven of its names are
-reserved rather than live, and a consumer writing a handler for one of them
-would wait forever. SPEC.md §6.2 is the normative copy of this table, audited
+not a list of what it detects or means to. SPEC.md §6.2 is the normative copy of this table, audited
 against every producer's code on 2026-08-03, and carries the reasoning.
 
 `approval_timeout` and `approval_unanswered` are two different facts. The first
@@ -383,6 +380,8 @@ from this repo._
 | Wardryx | shipped | wave-2 service; policy/approval gating, event schema v0.2 |
 | Verdryx | shipped | wave-2 service; evaluation and quality drift, event schema v0.2 |
 | Mockryx | shipped | wave-2 service; simulation and blast-radius testing, event schema v0.2 |
+
+The table above covers the original four and wave two only. The current registry is SPEC.md §6.2, which lists 14 sources.
 
 Event schema v0.2 (`schemas/agent-event.v0.2.schema.json`) opens the
 `source` field to any string and adds the wave-2 event types; v0.3 adds

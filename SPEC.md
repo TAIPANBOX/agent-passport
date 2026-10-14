@@ -788,7 +788,7 @@ self-protection, not third-party or adversarial traffic.
 
 | `source` | `type` values |
 |---|---|
-| `tokenfuse` | `budget_exhausted` · `sustained_loop` · `spend_spike` · `fanout_explosion` · `breaker_tripped` (medium) · `dlp_block` · `taint_block` · `mcp_drift` · `identity_mismatch` (high) · `tool_call` (low) · `budget_threshold` (medium) · `run_killed` (high) · `unit_cap_exceeded` (high) · `policy_deny` (high) · `dependency_failed` (high) · `taint_shadow` (medium) · `taint_raised` (low) · `taint_cleared` (high) · `breaker_shadow` (medium) · `run_stalled` (medium) · `call_retained` (medium) · `retained_closed` (high) |
+| `tokenfuse` | `budget_exhausted` · `sustained_loop` · `spend_spike` · `fanout_explosion` · `breaker_tripped` (medium) · `dlp_block` · `taint_block` · `mcp_drift` · `identity_mismatch` (high) · `tool_call` (low) · `budget_threshold` (medium) · `run_killed` (high) · `unit_cap_exceeded` (high) · `policy_deny` (high) · `dependency_failed` (high) · `taint_shadow` (medium) · `taint_raised` (low) · `taint_cleared` (high) · `breaker_shadow` (medium) · `run_stalled` (medium) · `call_retained` (medium) · `retained_closed` (high) · `dlp_shadow` (medium) |
 | `engram` | `memory_written` · `reflection_run` · `contradiction_found` · `memory_forgotten` |
 | `idryx` | `identity_finding` (severity per finding) |
 | `qryx` | `crypto_finding` · `crypto_drift` · `policy_violation` · `evidence_signed` |
@@ -1109,6 +1109,35 @@ shadow finding was actually spent so it is not `low`, and `high` would page on
 the default mode's ordinary week. On a replicated ledger the finding names the
 own run and its ancestors from a local read and is advisory; the enforce
 refusal is the decision.
+
+**`dlp_shadow` (medium)** is the DLP scanner's finding on a prompt it let
+through (@decided 2026-10-14): PII or a secret found while the scanner runs in
+`shadow` (forwarded as written) or `mask` (forwarded redacted). Until it existed
+a shadow finding was a note on the answer to the agent and nothing else, so
+the week an operator watches before turning `block` on produced no material to
+decide on, the gap `taint_shadow` and `breaker_shadow` closed for their own
+families. A separate type and not `dlp_block` with a mode, for the reason the
+taint pair gives: a consumer counting refusals must never count a call that
+went through. `data`: `summary` (the same string `dlp_block` carries, the count
+and the kinds, `2 pii finding(s): pii_card, pii_email`), `counts` (an object of
+kind to how often, `{"pii_card": 1, "pii_email": 1}`), `mode` (`shadow` or
+`mask`) and `unit`; never a matched span, in any member. `medium`, fixed:
+not `low`, since the text reached the provider (in `shadow`) or was rewritten
+on its way there (in `mask`); not `high`, which is `dlp_block`'s, since a shadow
+week paging on every finding is a week whose sender gets turned off.
+
+**A caller that named no agent** is filed under the one reserved subject
+`agent://unidentified.invalid/caller` (@decided 2026-10-14). An event names an
+agent or is not written (6.1), and some facts are about a caller that named
+none: TokenFuse's `identity_mismatch` for a call refused for its client key
+(`data.reason` `missing_key` or `unknown_key`, `data.key_fingerprint` the
+first 16 hex digits of the SHA-256 of what was presented, never the value) is
+exactly what a key scan produces, and a scan names no agent. The trust domain
+is under `.invalid` (RFC 2606), so the subject can never be an agent anybody
+issued, and a consumer can tell "nobody said who" from a real identity by
+equality. It is reserved like `AGENT_PASSPORT_ID` (3.3): a producer MUST NOT
+file an event about an identified caller under it, and MUST NOT mint any other
+placeholder; `data` says what was and was not claimed.
 
 **`run_stalled` (medium)** is the control plane's finding that a run stopped
 calling (@decided 2026-09-18): a run `tokenfuse-cloud` had seen calling at a

@@ -122,9 +122,11 @@ an absent invariant.
    *(gate: `scripts/version-compatibility.sh`; four cases in
    `gates-have-teeth.sh` for the 1.0 shape: the top level closed inside a major,
    another bound tightened across it, and the two non-faults)*
-6. **Reserved conventions stay reserved.** `labels.version` (4.6) and
-   `AGENT_PASSPORT_ID` (3.3) are reserved precisely so nobody redefines them
-   locally. Adding a new reserved convention is a spec decision.
+6. **Reserved conventions stay reserved.** `labels.version` (4.6),
+   `AGENT_PASSPORT_ID` (3.3) and the unidentified-caller subject
+   `agent://unidentified.invalid/caller` (6.2, 2026-10-14) are reserved
+   precisely so nobody redefines them locally. Adding a new reserved
+   convention is a spec decision.
 
    Both are conventions rather than schema changes, and that is the whole
    reason they are cheap: no field enters any document, no validator changes,

@@ -64,6 +64,7 @@ python .github/scripts/validate_examples.py
 ./scripts/runtimes-match-registry.sh
 ./scripts/attestation-methods-agree.sh
 ./scripts/features-are-bound.sh
+./scripts/checkpoint-vectors.sh
 ./scripts/gates-have-teeth.sh     # invariant 8; needs a clean tree and jsonschema
 ```
 
@@ -252,8 +253,8 @@ an absent invariant.
    not the change this file's escalation rule is about: nothing is committed,
    the tree is asserted clean before the run reports success, and a run that
    left residue fails instead. A spec change is still a decision for the user.
-   *(gate: `scripts/gates-have-teeth.sh`, 39 cases: eighteen real faults each
-   gate must catch, eight non-faults they must not, and thirteen subjects taken
+   *(gate: `scripts/gates-have-teeth.sh`, 68 cases: forty-five real faults each
+   gate must catch, eleven non-faults they must not, and twelve subjects taken
    away entirely. The non-faults are the ones worth keeping: prose that names
    something no schema declares is deliberately allowed by invariant 2's
    half-surface, and a raised ceiling is the widening 6.4 promises.)*
@@ -367,6 +368,27 @@ Invariants 1 and 6 are judgement and stay judgement.
     `scripts/features-are-bound.sh`; three cases in `gates-have-teeth.sh`: a
     scenario with no binding, a binding to a script that does not exist, and
     the directory taken away)*
+
+14. **A checkpoint record is one byte sequence, and its test vectors reproduce.**
+    SPEC 6.5.1 fixes the bytes of the checkpoint sidecar so that a Go writer and a
+    Rust writer, given the same stream and the same signature, write the same
+    record. Every record in `examples/checkpoint-vectors.json` must be the
+    canonical serialization of its own object, its signature must verify under
+    the key its `kid` names, its `prev` must chain from the genesis value, its
+    `head` must be the SPEC 6.5 chain hash of the stream line it counts, and its
+    `prefix` must be the SHA-256 of the stream's bytes through that line. The
+    record SPEC 6.5.1 quotes must be the first vector, byte for byte.
+
+    The gate also holds v1 to its refusals. Three negative variants are streams
+    that pass the 6.5 chain on their own: a forged earlier line with its successor
+    re-linked, a one-space change to an earlier line, and a truncated stream. Each
+    must be refused by exactly the records named for it, for the reason named. A
+    change that the chain cannot see is caught by `prefix`, and that is the point
+    of the member.
+    *(gate: `scripts/checkpoint-vectors.sh`, which re-derives every head, prefix,
+    prev and signature from the stream and the public key, and needs openssl;
+    eighteen cases in `gates-have-teeth.sh`: twelve faults, five subjects taken
+    away, and one non-fault it must not catch.)*
 
 ## Standing rule
 

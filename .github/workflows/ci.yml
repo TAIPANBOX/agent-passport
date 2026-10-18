@@ -44,6 +44,9 @@ jobs:
       - name: every scenario in features/ names a gate that exists
         run: ./scripts/features-are-bound.sh
 
+      - name: checkpoint vectors reproduce from the stream and the public key
+        run: ./scripts/checkpoint-vectors.sh
+
       # Last, because it mutates tracked files, including schemas/ and SPEC.md,
       # and restores them. Nothing is committed and the tree is asserted clean
       # before it reports success. It needs a clean tree and says so plainly,

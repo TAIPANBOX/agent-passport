@@ -1,0 +1,43 @@
+{
+  "description": "Public test vectors for SPEC 6.5.1 (checkpoint sidecar, format v1). Verify them; do not reuse the key. The private key was generated for these vectors, is not published, and was discarded.",
+  "key": {
+    "crv": "P-256",
+    "kty": "EC",
+    "x": "0YVxGnfQSJIvVNRBeARQ84PW8MDb5EENEA6GzQy3KBU",
+    "y": "KIqBkBF1LHg_QtyUHXnSENegeCy_4p2m7YG3W-fG6_E",
+    "kid": "ltxfPGZ7OZ8axCd3_X3CDgODPYqpGLw-aAKucokIIIE"
+  },
+  "stream": {
+    "name": "wardryx.ndjson",
+    "lines": [
+      "{\"agent_id\":\"agent://acme-bank.example/support/tier1-bot\",\"data\":{\"policy_id\":\"pol-refunds\",\"policy_version\":3},\"schema\":\"taipanbox.dev/agent-event/v1.0\",\"severity\":\"info\",\"source\":\"wardryx\",\"ts\":\"2026-10-18T09:00:00.000Z\",\"type\":\"policy_allow\"}",
+      "{\"agent_id\":\"agent://acme-bank.example/support/tier1-bot\",\"data\":{\"policy_id\":\"pol-refunds\",\"policy_version\":3},\"prev_hash\":\"sha256:c7218ef9daae89503aa8bd0ac7e4508089225d4c77605bb16fccd3816826752c\",\"schema\":\"taipanbox.dev/agent-event/v1.0\",\"severity\":\"info\",\"source\":\"wardryx\",\"ts\":\"2026-10-18T09:00:02.000Z\",\"type\":\"policy_allow\"}",
+      "{\"agent_id\":\"agent://acme-bank.example/support/tier1-bot\",\"data\":{\"policy_id\":\"pol-refunds\",\"policy_version\":3},\"prev_hash\":\"sha256:90a9c16cfc2efed1c225aa052b589ef32104fbd9e51e3e3a123e568cc1b47c90\",\"schema\":\"taipanbox.dev/agent-event/v1.0\",\"severity\":\"info\",\"source\":\"wardryx\",\"ts\":\"2026-10-18T09:00:04.000Z\",\"type\":\"approval_granted\"}"
+    ]
+  },
+  "checkpoints": [
+    {
+      "signing_input": "{\"alg\":\"ES256\",\"at\":\"2026-10-18T09:00:10.000Z\",\"count\":2,\"head\":\"sha256:90a9c16cfc2efed1c225aa052b589ef32104fbd9e51e3e3a123e568cc1b47c90\",\"kid\":\"ltxfPGZ7OZ8axCd3_X3CDgODPYqpGLw-aAKucokIIIE\",\"kind\":\"checkpoint\",\"prev\":\"sha256:0000000000000000000000000000000000000000000000000000000000000000\",\"stream\":\"wardryx.ndjson\",\"v\":1}",
+      "record": "{\"alg\":\"ES256\",\"at\":\"2026-10-18T09:00:10.000Z\",\"count\":2,\"head\":\"sha256:90a9c16cfc2efed1c225aa052b589ef32104fbd9e51e3e3a123e568cc1b47c90\",\"kid\":\"ltxfPGZ7OZ8axCd3_X3CDgODPYqpGLw-aAKucokIIIE\",\"kind\":\"checkpoint\",\"prev\":\"sha256:0000000000000000000000000000000000000000000000000000000000000000\",\"sig\":\"gi-_Set8samghIPUmxyzP0AsMw7P5VUeA6MbK2i4sAn2JhPggxTkxouI7_9w3TcGcXHkDwOI_xfZ0lVi32lSyQ\",\"stream\":\"wardryx.ndjson\",\"v\":1}"
+    },
+    {
+      "signing_input": "{\"alg\":\"ES256\",\"at\":\"2026-10-18T09:00:20.000Z\",\"count\":3,\"head\":\"sha256:c54b5972bc6255eede8af666f7f4f71b6541bbc3655520557a168be9d381044f\",\"kid\":\"ltxfPGZ7OZ8axCd3_X3CDgODPYqpGLw-aAKucokIIIE\",\"kind\":\"resume\",\"prev\":\"sha256:8d642ccaf35c96babeb2f25517245e301e46993c29d20087b6a03da86c19c545\",\"stream\":\"wardryx.ndjson\",\"v\":1}",
+      "record": "{\"alg\":\"ES256\",\"at\":\"2026-10-18T09:00:20.000Z\",\"count\":3,\"head\":\"sha256:c54b5972bc6255eede8af666f7f4f71b6541bbc3655520557a168be9d381044f\",\"kid\":\"ltxfPGZ7OZ8axCd3_X3CDgODPYqpGLw-aAKucokIIIE\",\"kind\":\"resume\",\"prev\":\"sha256:8d642ccaf35c96babeb2f25517245e301e46993c29d20087b6a03da86c19c545\",\"sig\":\"b4XWYZxcCH9CrJTGBpetfEmGtZD2Xj4gMTNIXySzFBvdJpi0Hdg0CyZPHlz7D0_uP8oDkyKJEpiIH_zlZ4Udbw\",\"stream\":\"wardryx.ndjson\",\"v\":1}"
+    },
+    {
+      "signing_input": "{\"alg\":\"ES256\",\"at\":\"2026-10-18T09:00:30.000Z\",\"count\":3,\"head\":\"sha256:c54b5972bc6255eede8af666f7f4f71b6541bbc3655520557a168be9d381044f\",\"kid\":\"ltxfPGZ7OZ8axCd3_X3CDgODPYqpGLw-aAKucokIIIE\",\"kind\":\"close\",\"prev\":\"sha256:d2a2672a48a6ced6de5d087b01aa9ac3c0e9b91976e26e099810b8e794520233\",\"stream\":\"wardryx.ndjson\",\"v\":1}",
+      "record": "{\"alg\":\"ES256\",\"at\":\"2026-10-18T09:00:30.000Z\",\"count\":3,\"head\":\"sha256:c54b5972bc6255eede8af666f7f4f71b6541bbc3655520557a168be9d381044f\",\"kid\":\"ltxfPGZ7OZ8axCd3_X3CDgODPYqpGLw-aAKucokIIIE\",\"kind\":\"close\",\"prev\":\"sha256:d2a2672a48a6ced6de5d087b01aa9ac3c0e9b91976e26e099810b8e794520233\",\"sig\":\"9ASpNeYBWaQ6Wn8Un89j-f3zWPMpXHdicVbUr_8kOP9SYYoh9x5exqfrYFGeId74pfWeTLhcFVhHn3zh10tmIQ\",\"stream\":\"wardryx.ndjson\",\"v\":1}"
+    },
+    {
+      "record": "{\"at\":\"2026-10-18T09:00:40.000Z\",\"count\":3,\"head\":\"sha256:c54b5972bc6255eede8af666f7f4f71b6541bbc3655520557a168be9d381044f\",\"kind\":\"checkpoint\",\"prev\":\"sha256:230ae4fdda081919366fa5f87a3f6f1746ec9854e0b6f829147eb0c8772ebb24\",\"stream\":\"wardryx.ndjson\",\"unsigned_reason\":\"key_expired\",\"v\":1}"
+    }
+  ],
+  "known_limit_forged_prefix": {
+    "lines": [
+      "{\"agent_id\":\"agent://acme-bank.example/support/tier1-bot\",\"data\":{\"policy_id\":\"pol-refunds\",\"policy_version\":4},\"schema\":\"taipanbox.dev/agent-event/v1.0\",\"severity\":\"info\",\"source\":\"wardryx\",\"ts\":\"2026-10-18T09:00:00.000Z\",\"type\":\"policy_allow\"}",
+      "{\"agent_id\":\"agent://acme-bank.example/support/tier1-bot\",\"data\":{\"policy_id\":\"pol-refunds\",\"policy_version\":3},\"prev_hash\":\"sha256:dc1a77e3648643e03cda9a9192f3e0ff7721486d87a286192420acab4c70f40e\",\"schema\":\"taipanbox.dev/agent-event/v1.0\",\"severity\":\"info\",\"source\":\"wardryx\",\"ts\":\"2026-10-18T09:00:02.000Z\",\"type\":\"policy_allow\"}",
+      "{\"agent_id\":\"agent://acme-bank.example/support/tier1-bot\",\"data\":{\"policy_id\":\"pol-refunds\",\"policy_version\":3},\"prev_hash\":\"sha256:90a9c16cfc2efed1c225aa052b589ef32104fbd9e51e3e3a123e568cc1b47c90\",\"schema\":\"taipanbox.dev/agent-event/v1.0\",\"severity\":\"info\",\"source\":\"wardryx\",\"ts\":\"2026-10-18T09:00:04.000Z\",\"type\":\"approval_granted\"}"
+    ],
+    "note": "Line 1 differs from stream.lines[0] and line 2 is re-linked to it. Every checkpoint above still verifies against these lines: SPEC 6.5.1 states this limit."
+  }
+}

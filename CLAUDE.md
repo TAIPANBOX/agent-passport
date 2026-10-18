@@ -64,6 +64,7 @@ python .github/scripts/validate_examples.py
 ./scripts/runtimes-match-registry.sh
 ./scripts/attestation-methods-agree.sh
 ./scripts/features-are-bound.sh
+./scripts/checkpoint-vectors.sh
 ./scripts/gates-have-teeth.sh     # invariant 8; needs a clean tree and jsonschema
 ```
 
@@ -252,8 +253,8 @@ an absent invariant.
    not the change this file's escalation rule is about: nothing is committed,
    the tree is asserted clean before the run reports success, and a run that
    left residue fails instead. A spec change is still a decision for the user.
-   *(gate: `scripts/gates-have-teeth.sh`, 39 cases: eighteen real faults each
-   gate must catch, eight non-faults they must not, and thirteen subjects taken
+   *(gate: `scripts/gates-have-teeth.sh`, 65 cases: forty-two real faults each
+   gate must catch, eleven non-faults they must not, and twelve subjects taken
    away entirely. The non-faults are the ones worth keeping: prose that names
    something no schema declares is deliberately allowed by invariant 2's
    half-surface, and a raised ceiling is the widening 6.4 promises.)*
@@ -367,6 +368,25 @@ Invariants 1 and 6 are judgement and stay judgement.
     `scripts/features-are-bound.sh`; three cases in `gates-have-teeth.sh`: a
     scenario with no binding, a binding to a script that does not exist, and
     the directory taken away)*
+
+14. **A checkpoint record is one byte sequence, and its test vectors reproduce.**
+    SPEC 6.5.1 fixes the bytes of the checkpoint sidecar so that a Go writer and a
+    Rust writer, given the same stream and the same signature, write the same
+    record. Every record in `examples/checkpoint-vectors.json` must be the
+    canonical serialization of its own object, its signature must verify under
+    the key its `kid` names, its `prev` must chain from the genesis value, and its
+    `head` must be the SPEC 6.5 chain hash of the stream line it counts. The
+    record SPEC 6.5.1 quotes must be the first vector, byte for byte.
+
+    The gate also asserts the known limit, and that is the part to read. A stream
+    whose first line is rewritten, with its second line re-linked, passes every
+    checkpoint, because a line's hash does not cover its own `prev_hash`. The gate
+    requires that to hold, so a format that closes the gap must rewrite SPEC 6.5.1
+    and this gate together.
+    *(gate: `scripts/checkpoint-vectors.sh`, which re-derives every head, prev and
+    signature from the stream and the public key, and needs openssl; fifteen
+    cases in `gates-have-teeth.sh`: nine faults, five subjects taken away, and one
+    non-fault it must not catch.)*
 
 ## Standing rule
 

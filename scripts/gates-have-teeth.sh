@@ -629,6 +629,132 @@ run_case "attestation-methods-agree: README loses the row entirely" fail \
 	"$(py 'edit("README.md", "| `attestation.method` | no |", "| `attestation.methods` | no |")')" \
 	"measured nothing"
 
+# ----------------------------------------------------------------------------
+# invariant 14: the checkpoint vectors reproduce. A signature that stops
+# verifying, a record that is not its own canonical bytes, a chain that breaks,
+# a head that names the wrong line, a quote that drifted from its vector, and a
+# known limit that a later format closes are each a fault the gate must catch.
+
+run_case "checkpoint-vectors: a signature byte changed" fail \
+	'./scripts/checkpoint-vectors.sh' \
+	"$(py 'import json
+p = "examples/checkpoint-vectors.json"
+d = json.load(open(p))
+r = json.loads(d["checkpoints"][0]["record"])
+r["sig"] = ("A" if r["sig"][0] != "A" else "B") + r["sig"][1:]
+d["checkpoints"][0]["record"] = json.dumps(r, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+json.dump(d, open(p, "w"), indent=2)')" \
+	"does not verify"
+
+run_case "checkpoint-vectors: a count changed without re-signing" fail \
+	'./scripts/checkpoint-vectors.sh' \
+	"$(py 'import json
+p = "examples/checkpoint-vectors.json"
+d = json.load(open(p))
+r = json.loads(d["checkpoints"][0]["record"])
+r["count"] = 1
+d["checkpoints"][0]["record"] = json.dumps(r, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+json.dump(d, open(p, "w"), indent=2)')" \
+	"does not verify"
+
+run_case "checkpoint-vectors: a record whose members are out of JCS order" fail \
+	'./scripts/checkpoint-vectors.sh' \
+	"$(py 'import json
+p = "examples/checkpoint-vectors.json"
+d = json.load(open(p))
+r = json.loads(d["checkpoints"][0]["record"])
+r = dict(reversed(list(r.items())))
+d["checkpoints"][0]["record"] = json.dumps(r, separators=(",", ":"), ensure_ascii=False)
+json.dump(d, open(p, "w"), indent=2)')" \
+	"is not the canonical serialization"
+
+run_case "checkpoint-vectors: the second record's prev re-linked" fail \
+	'./scripts/checkpoint-vectors.sh' \
+	"$(py 'import json
+p = "examples/checkpoint-vectors.json"
+d = json.load(open(p))
+r = json.loads(d["checkpoints"][1]["record"])
+r["prev"] = "sha256:" + "1" * 64
+d["checkpoints"][1]["record"] = json.dumps(r, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+json.dump(d, open(p, "w"), indent=2)')" \
+	"prev does not chain"
+
+run_case "checkpoint-vectors: a stream line's prev_hash re-linked" fail \
+	'./scripts/checkpoint-vectors.sh' \
+	"$(py 'edit("examples/checkpoint-vectors.json", "c7218ef9daae89", "c7218ef9daaf89")')" \
+	"prev_hash does not chain from line 1"
+
+run_case "checkpoint-vectors: a stream line's content changed under a head" fail \
+	'./scripts/checkpoint-vectors.sh' \
+	"$(py 'edit("examples/checkpoint-vectors.json", "2026-10-18T09:00:04.000Z", "2026-10-18T09:00:05.000Z")')" \
+	"head does not equal the chain hash of line 3"
+
+run_case "checkpoint-vectors: SPEC 6.5.1 quotes a record the vectors do not hold" fail \
+	'./scripts/checkpoint-vectors.sh' \
+	"$(py 'import json
+sig = json.loads(json.load(open("examples/checkpoint-vectors.json"))["checkpoints"][0]["record"])["sig"]
+edit("SPEC.md", sig, ("A" if sig[0] != "A" else "B") + sig[1:])')" \
+	"does not quote"
+
+run_case "checkpoint-vectors: the forged prefix is the honest stream, so it forges nothing" fail \
+	'./scripts/checkpoint-vectors.sh' \
+	"$(py 'import json
+p = "examples/checkpoint-vectors.json"
+d = json.load(open(p))
+d["known_limit_forged_prefix"]["lines"] = d["stream"]["lines"]
+json.dump(d, open(p, "w"), indent=2)')" \
+	"forges nothing"
+
+run_case "checkpoint-vectors: a later format closes the limit and the gate does not notice" fail \
+	'./scripts/checkpoint-vectors.sh' \
+	"$(py 'import json
+p = "examples/checkpoint-vectors.json"
+d = json.load(open(p))
+d["known_limit_forged_prefix"]["lines"][2] = d["known_limit_forged_prefix"]["lines"][2].replace("09:00:04", "09:00:09")
+json.dump(d, open(p, "w"), indent=2)')" \
+	"KNOWN LIMIT no longer holds"
+
+run_case "checkpoint-vectors: the vector file is gone" fail \
+	'./scripts/checkpoint-vectors.sh' \
+	"$(py 'import subprocess
+subprocess.run(["git", "mv", "examples/checkpoint-vectors.json", "examples/checkpoint-vectors.json.disabled"], check=True)')" \
+	"measured nothing"
+
+run_case "checkpoint-vectors: SPEC 6.5.1 loses its heading" fail \
+	'./scripts/checkpoint-vectors.sh' \
+	"$(py 'edit("SPEC.md", "### 6.5.1 Checkpoint sidecar", "### 6.5.9 Checkpoint sidecar")')" \
+	"measured nothing"
+
+run_case "checkpoint-vectors: no checkpoint record left" fail \
+	'./scripts/checkpoint-vectors.sh' \
+	"$(py 'import json
+p = "examples/checkpoint-vectors.json"
+d = json.load(open(p))
+d["checkpoints"] = []
+json.dump(d, open(p, "w"), indent=2)')" \
+	"measured nothing"
+
+run_case "checkpoint-vectors: no stream line left" fail \
+	'./scripts/checkpoint-vectors.sh' \
+	"$(py 'import json
+p = "examples/checkpoint-vectors.json"
+d = json.load(open(p))
+d["stream"]["lines"] = []
+json.dump(d, open(p, "w"), indent=2)')" \
+	"measured nothing"
+
+run_case "checkpoint-vectors: no openssl to verify a signature with" fail_env \
+	'OPENSSL=/nonexistent/openssl ./scripts/checkpoint-vectors.sh' \
+	"$(py 'pass')" \
+	"measured nothing"
+
+run_case "checkpoint-vectors: the vector file re-indented, records unchanged" pass \
+	'./scripts/checkpoint-vectors.sh' \
+	"$(py 'import json
+p = "examples/checkpoint-vectors.json"
+d = json.load(open(p))
+json.dump(d, open(p, "w"), indent=4)')"
+
 run_case "attestation-methods-agree: no example declares an attestation" fail \
 	'./scripts/attestation-methods-agree.sh' \
 	"$(py 'import json, pathlib

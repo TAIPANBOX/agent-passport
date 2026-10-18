@@ -779,6 +779,7 @@ Registered sources today:
 | `costcrew` | FinOps console, agent-staffed. A guest producer: it writes and calls nobody |
 | `typryx` | typed answers with a probability, an optional add-on (it writes and calls nobody else in the stack) |
 | `agent-conform` | the on-box hash-chain verifier (`agent-conform watch-dir`), an optional add-on that reads the bus and writes only its own stream |
+| `keyryx` | key custody and the independent witness of the record (wave 2; reserved until its first release) |
 
 wardryx, verdryx, and mockryx are wave-2 services; like the original four,
 this contract governs an operator's own agents, for the operator's own
@@ -801,7 +802,8 @@ self-protection, not third-party or adversarial traffic.
 | `scopyx` | `web_fetch` (low) · `web_blocked` (high) |
 | `costcrew` | `spend_spike` (low to critical, by excess) · `budget_threshold` (low to high, by how far past) · `anomaly_triaged` · `anomaly_explained` · `anomaly_accepted` · `anomaly_dismissed` (all low to critical, by excess) · `budgets_set` · `forecast_frozen` · `explainer_published` · `sprint_planned` · `agent_hired` · `agent_rebriefed` · `agent_removed` · `agent_transferred` (all info) · `agent_state_changed` (info, high when the state is not active) · `generated_estate_replaced` (info: a person replaced the generated estate with real charges through a connector; the event names the tables it emptied) · `option_refused` (low: a deliverable's options named a decision outside the writing role's job, or the block was malformed, and it was saved without them and returned with the reason; or a person refused an option carried to them, with their reason) · `option_applied` (info: a stamp, the supervisor's own or an owner's, applied one option of a deliverable) · `decision_requested` (info: the supervisor's pass sent one owner one sprint's options that its job hands upward; it names a date after which it counts as lapsed, and nothing enforces that date) · `cadence_set` (info: a person changed the console's cadence switch and its ceiling on the /cadence page; that switch is what the runner's -due mode reads before it will spend anything on a clock, and nothing runs because of this event by itself) · `crew_ran` (info: one clock-driven -due -live run of the crew finished, naming the sprint, tasks run, tasks refused before any call, the cost in micro-dollars summed once and the ceiling it was held to; nothing is enforced by it, it records what was spent) · `plan_asked` (info: a person asked the supervisor to plan the next sprint with a model, beside the deterministic plan; the call is priced first and refused, before it is made, over the supervisor's own per-task guard or with no gateway configured; the event carries the outcome, the cost in micro-dollars, the sprint and who asked; a person still approves one of the two plans, and nothing runs on a clock because of it) · `anomaly_hinted` (info: an optional typed hint, asked of typryx before an analyst works an anomaly; written only on an installation configured with a typryx URL, once per anomaly asked, carrying the anomaly, the outcome (hinted or no_hint), the backend that answered, the class and its probability or the reason there is no hint, and the NAMES of the fields that were sent, never their values; the hint decides nothing and moves no anomaly) |
 | `typryx` | `typed_answer` (info) · `typed_unanswered` (medium) · `typed_refused` (high) · `calibration_drift` (high) |
-| `agent-conform` | `chain_broken` (high) · `chain_unchained` (low) |
+| `agent-conform` | `chain_broken` (high) · `chain_unchained` (low) · `chain_restarted` (medium; high when no resume checkpoint explains it) |
+| `keyryx` | RESERVED, not emitted today (wave 2): `witness_stream_rewritten` (high) · `witness_stream_truncated` (high) · `witness_chain_restarted` (medium; high when no resume checkpoint explains it) · `witness_checkpoint_invalid` (high) · `witness_checkpoint_unsigned` (medium) · `witness_root_missing` (medium) · `witness_root_equivocated` (high) · `key_rotated` (info) · `key_revoked` (high) |
 
 
 A row here is a CLAIM that the source writes those types into this envelope
@@ -846,6 +848,12 @@ aspirational:
   chain restart and a garbled line leaves the next one unverifiable, and
   neither raises an alert (both are counted in `data`), and truncation from the
   end changes no hash in what remains.
+
+- **`keyryx`, RESERVED until its first release (@decided 2026-10-18).** The custody and witness service writes nothing into this envelope yet, so its row carries the mark every reserved name carries. Its events are stamped `taipanbox.dev/agent-event/v1.0`. Their subjects are synthetic and name the producer as its own well-formed subject, as `wardryx`'s `policy_updated` and agent-conform's `chain_broken` already do: `agent://keyryx.internal/custody` for `key_rotated` and `key_revoked`, and `agent://keyryx.internal/witness` for every `witness_*` type, where `data` names the stream or tenant the finding concerns. No other producer files an event under either subject. A `witness_*` finding carries counts and clipped hashes, never record content. `key_rotated` carries `name`, `kid` (the new key), `previous_kid` and `alg`; `key_revoked` carries `name`, `kid` and `alg`.
+
+- **Two types whose band depends on one fact.** `chain_restarted` and `witness_chain_restarted` are medium, and high when no checkpoint of kind `resume` (6.5.1) explains the restart. This is the only conditional band in the registry. The verifier's code decides it from that one fact and no call site chooses it, so a consumer that counts high events counts the unexplained restarts and nothing else.
+
+- **`chain_restarted` is listed ahead of its producer.** agent-conform writes `chain_broken` and `chain_unchained` today, and writes `chain_restarted` only from the release that adds it (agent-stack-go, AS1). The row carries a reserved mark on the whole source, which would also mark the two types that are written today, so this bullet says it instead: this is the one row in this table that is ahead of its producer.
 
 - **`idryx` emitted nothing into this envelope until 2026-08-10**, and the
   seven names reserved for it were wrong in both directions. It shipped 25
@@ -1481,7 +1489,51 @@ prev_hash = "sha256:" + hex(sha256(C))
 
 where `C` is the RFC 8785 (JSON Canonicalization Scheme, JCS) canonical
 serialization of the event object with the `prev_hash` field itself
-removed. Format: `^sha256:[0-9a-f]{64}$`.
+removed. Format: `^sha256:[0-9a-f]{64}$`. The checkpoint records of 6.5.1 take their `head` by this rule.
+
+### 6.5.1 Checkpoint sidecar (format v1, keyryx wave 2)
+
+A producer that signs its stream writes beside it a checkpoint file that only the producer may write. This section fixes the bytes of that file, so that a Go writer and a Rust writer given the same stream and the same signature produce the same record. The test vectors are in `examples/checkpoint-vectors.json`, and `scripts/checkpoint-vectors.sh` reproduces every one of them.
+
+**Placement.** The checkpoint file of a stream is named `<stream>.ckpt.ndjson`, where `<stream>` is the stream's full file name (for example `wardryx.ndjson.ckpt.ndjson`), and it lives in a checkpoints directory separate from the events directory. Its name ends in `.ndjson` too, so it must never sit where a reader globs for event streams: a reader that took it for a stream would find a chain with no `prev_hash` in it.
+
+**Records.** A checkpoint file holds one record per line. A record is a JSON object, serialized as its JSON Canonicalization Scheme form (RFC 8785: members sorted, no insignificant whitespace) and followed by exactly one LF. A verifier MUST refuse a line whose bytes are not that serialization, and a line with any member, type or value this section does not list. The members are:
+
+| member | value |
+|---|---|
+| `v` | the integer `1`, the format version |
+| `kind` | `checkpoint` (written every 64 events or every 10 seconds, whichever comes first), `close` (written on clean close), or `resume` (written when a writer reopens a stream whose tail it could not chain from; `count` and `head` are then what it found there) |
+| `stream` | the stream's file name, such as `wardryx.ndjson`, with no path separator |
+| `count` | an integer of at least 1: the number of lines in the stream when the record was taken, counting every newline-terminated line whatever its content |
+| `head` | `sha256:` followed by 64 lowercase hex digits: the chain hash of line `count` under 6.5, which is the value line `count + 1` carries as its `prev_hash` |
+| `at` | the time in UTC, in exactly the form `YYYY-MM-DDTHH:MM:SS.sssZ` |
+| `prev` | `sha256:` followed by 64 lowercase hex digits: the SHA-256 of the previous record's bytes without its LF; in the first record of a file, 64 zeros |
+| `kid` | the RFC 7638 thumbprint of the signing key, base64url without padding |
+| `alg` | `ES256` |
+| `sig` | the signature of the record, base64url without padding (see Signing) |
+
+A record is signed or unsigned. A signed record has `alg`, `kid` and `sig`. An unsigned record has none of those three and carries `unsigned_reason` instead. Its only value in format v1 is `key_expired`, which a writer uses when its key is past `not_after` and it cannot sign. Unsigned records are chained like the others. A verifier reports an unsigned record as unsigned, never as valid, and does the same for any other `unsigned_reason` value.
+
+Any change to a member or a rule here is a new value of `v`. A verifier that meets a `v` it does not know reports the file and does not guess at it.
+
+**Signing.** The signing input is the JCS serialization of the record's object with `sig` removed. The signature is ECDSA on P-256 over the SHA-256 digest of the signing input (ES256), encoded as the 64 bytes of r followed by s, each as 32 big-endian bytes, as RFC 7518 section 3.4 defines it. The record is the signing input with `sig` added. ECDSA signatures are randomized, so two writers signing the same input produce different signature bytes. The byte-identity rule therefore covers the signing input and the record given its signature. Any valid signature verifies.
+
+**Verification.** For each line, in order, a verifier MUST:
+
+1. refuse a line that is not the canonical serialization of its own object, or that breaks the member rules above;
+2. for a signed record, take the public key named by `kid` from a key statement that certifies the key as valid at `at`, and verify `sig` over the signing input. The format of that statement belongs to the service that certifies the key, not to this section;
+3. check `prev` against the genesis value (first record) or against the SHA-256 of the previous record's bytes;
+4. check `count` against the stream: the stream MUST hold at least `count` lines, and `head` MUST equal the chain hash of line `count` under 6.5.
+
+A final line with no LF is a torn append. A verifier ignores it and does not report it as invalid.
+
+**What a checkpoint does not show.** The chain hash of line `count` is computed under 6.5, which removes the line's own `prev_hash` before hashing it. So `head` depends on that line's content and on nothing before it. A writer that rewrites an earlier line and re-links the line after it passes every check in this section, and a checkpoint taken afterwards signs the rewritten stream. `examples/checkpoint-vectors.json` carries such a stream as `known_limit_forged_prefix`, and the four records verify against it. A checkpoint therefore shows that the stream held the line at `count` with that content when the record was signed. It does not show that the lines before it are unchanged. Closing that gap needs a digest over the stream's prefix, which format v1 does not carry.
+
+**Test vectors.** `examples/checkpoint-vectors.json` gives the public key, a three-line stream, four records (a `checkpoint`, a `resume`, a `close` and an unsigned `checkpoint`) with the signing input of each signed one, and the forged prefix above. The first record, quoted whole so a reader can see one, is:
+
+```json
+{"alg":"ES256","at":"2026-10-18T09:00:10.000Z","count":2,"head":"sha256:90a9c16cfc2efed1c225aa052b589ef32104fbd9e51e3e3a123e568cc1b47c90","kid":"ltxfPGZ7OZ8axCd3_X3CDgODPYqpGLw-aAKucokIIIE","kind":"checkpoint","prev":"sha256:0000000000000000000000000000000000000000000000000000000000000000","sig":"gi-_Set8samghIPUmxyzP0AsMw7P5VUeA6MbK2i4sAn2JhPggxTkxouI7_9w3TcGcXHkDwOI_xfZ0lVi32lSyQ","stream":"wardryx.ndjson","v":1}
+```
 
 ## 7. Conformance
 

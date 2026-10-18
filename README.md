@@ -288,7 +288,7 @@ Registered sources today:
 | `engram` | memory governance | `memory_written` · `reflection_run` · `contradiction_found` · `memory_forgotten` |
 | `idryx` | identity and access governance | `identity_finding` (severity per finding) |
 | `qryx` | cryptographic evidence | `crypto_finding` · `crypto_drift` · `policy_violation` · `evidence_signed` |
-| `wardryx` | policy and approval gating (wave 2) | `policy_allow` (info) · `policy_deny` (high) · `approval_requested` (medium) · `approval_granted` (info) · `approval_denied` (high) · `approval_timeout` (high) · `approval_unanswered` (high) · `policy_updated` (high) |
+| `wardryx` | policy and approval gating (wave 2) | `policy_allow` (info) · `policy_deny` (high) · `approval_requested` (medium) · `approval_granted` (info) · `approval_denied` (high) · `approval_timeout` (high) · `approval_unanswered` (high) · `policy_updated` (high) · `agent_assertion_refused` (high) |
 | `verdryx` | evaluation and quality drift (wave 2) | `eval_run` (info) · `quality_score` (info) · `quality_drift` (high) · `slo_burn` (high) |
 | `mockryx` | simulation and blast-radius testing (wave 2) | `sim_run` (info) · `sim_finding` (high) · `blast_radius_measured` (medium) |
 | `console` | the operator console's own privileged actions (Genaryx) | `console_command` |

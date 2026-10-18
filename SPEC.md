@@ -1493,7 +1493,7 @@ removed. Format: `^sha256:[0-9a-f]{64}$`. The checkpoint records of 6.5.1 take t
 
 ### 6.5.1 Checkpoint sidecar (format v1, keyryx wave 2)
 
-A producer that signs its stream writes beside it a checkpoint file that only the producer may write. This section fixes the bytes of that file, so that a Go writer and a Rust writer given the same stream and the same signature produce the same record. The test vectors are in `examples/checkpoint-vectors.json`, and `scripts/checkpoint-vectors.sh` reproduces every one of them.
+A producer that signs its stream writes beside it a checkpoint file that only the producer may write. This section fixes the bytes of that file, so that a Go writer and a Rust writer given the same stream and the same signature produce the same record. The test vectors are in `examples/checkpoint-vectors.json`, and `scripts/checkpoint-vectors.sh` reproduces every one of them and checks the variants that v1 must refuse.
 
 **Placement.** The checkpoint file of a stream is named `<stream>.ckpt.ndjson`, where `<stream>` is the stream's full file name (for example `wardryx.ndjson.ckpt.ndjson`), and it lives in a checkpoints directory separate from the events directory. Its name ends in `.ndjson` too, so it must never sit where a reader globs for event streams: a reader that took it for a stream would find a chain with no `prev_hash` in it.
 
@@ -1502,19 +1502,22 @@ A producer that signs its stream writes beside it a checkpoint file that only th
 | member | value |
 |---|---|
 | `v` | the integer `1`, the format version |
-| `kind` | `checkpoint` (written every 64 events or every 10 seconds, whichever comes first), `close` (written on clean close), or `resume` (written when a writer reopens a stream whose tail it could not chain from; `count` and `head` are then what it found there) |
+| `kind` | `checkpoint` (written every 64 events or every 10 seconds, whichever comes first), `close` (written on clean close), or `resume` (written when a writer reopens a stream whose tail it could not chain from; `count`, `head` and `prefix` are then what it found there) |
 | `stream` | the stream's file name, such as `wardryx.ndjson`, with no path separator |
 | `count` | an integer of at least 1: the number of lines in the stream when the record was taken, counting every newline-terminated line whatever its content |
 | `head` | `sha256:` followed by 64 lowercase hex digits: the chain hash of line `count` under 6.5, which is the value line `count + 1` carries as its `prev_hash` |
+| `prefix` | `sha256:` followed by 64 lowercase hex digits: the SHA-256 of the first N bytes of the stream file, where N is the offset just after the LF that ends line `count`. That is the byte length through the last counted line, its LF included |
 | `at` | the time in UTC, in exactly the form `YYYY-MM-DDTHH:MM:SS.sssZ` |
 | `prev` | `sha256:` followed by 64 lowercase hex digits: the SHA-256 of the previous record's bytes without its LF; in the first record of a file, 64 zeros |
 | `kid` | the RFC 7638 thumbprint of the signing key, base64url without padding |
 | `alg` | `ES256` |
 | `sig` | the signature of the record, base64url without padding (see Signing) |
 
-A record is signed or unsigned. A signed record has `alg`, `kid` and `sig`. An unsigned record has none of those three and carries `unsigned_reason` instead. Its only value in format v1 is `key_expired`, which a writer uses when its key is past `not_after` and it cannot sign. Unsigned records are chained like the others. A verifier reports an unsigned record as unsigned, never as valid, and does the same for any other `unsigned_reason` value.
+A record is signed or unsigned. A signed record has `alg`, `kid` and `sig`. An unsigned record has none of those three and carries `unsigned_reason` instead. Its only value in format v1 is `key_expired`, which a writer uses when its key is past `not_after` and it cannot sign. Unsigned records are chained and carry `prefix` like the others. A verifier reports an unsigned record as unsigned, never as valid, and does the same for any other `unsigned_reason` value.
 
 Any change to a member or a rule here is a new value of `v`. A verifier that meets a `v` it does not know reports the file and does not guess at it.
+
+**Keeping `prefix`.** A writer keeps a running SHA-256 of the stream file together with the byte offset it has hashed to. Each time it appends a complete line and its LF, it feeds those bytes into the hash and advances the offset, so `prefix` is ready when a checkpoint is due. A writer that opens a file it did not write, or that finds the file longer than its offset because another writer appended, first feeds the bytes from its offset through the last LF in the file into the hash, and does not re-read what it has already hashed. A writer that finds the file shorter than its offset MUST NOT write a checkpoint until it has hashed the file again from byte zero. A writer that cannot say which bytes a checkpoint covers MUST NOT write it.
 
 **Signing.** The signing input is the JCS serialization of the record's object with `sig` removed. The signature is ECDSA on P-256 over the SHA-256 digest of the signing input (ES256), encoded as the 64 bytes of r followed by s, each as 32 big-endian bytes, as RFC 7518 section 3.4 defines it. The record is the signing input with `sig` added. ECDSA signatures are randomized, so two writers signing the same input produce different signature bytes. The byte-identity rule therefore covers the signing input and the record given its signature. Any valid signature verifies.
 
@@ -1523,16 +1526,25 @@ Any change to a member or a rule here is a new value of `v`. A verifier that mee
 1. refuse a line that is not the canonical serialization of its own object, or that breaks the member rules above;
 2. for a signed record, take the public key named by `kid` from a key statement that certifies the key as valid at `at`, and verify `sig` over the signing input. The format of that statement belongs to the service that certifies the key, not to this section;
 3. check `prev` against the genesis value (first record) or against the SHA-256 of the previous record's bytes;
-4. check `count` against the stream: the stream MUST hold at least `count` lines, and `head` MUST equal the chain hash of line `count` under 6.5.
+4. check `count` against the stream. If the stream holds fewer than `count` LF-terminated lines, the stream is shorter than the record's N bytes: the record is refused, and the verifier reports the stream as truncated. Otherwise `head` MUST equal the chain hash of line `count` under 6.5, and `prefix` MUST equal the SHA-256 of the first N bytes of the stream;
+5. for every earlier record of the same stream that the verifier holds, with a `count` no greater than this one, the stream MUST still hash to that record's `prefix` through that record's N.
 
-A final line with no LF is a torn append. A verifier ignores it and does not report it as invalid.
+A final line with no LF is a torn append. A verifier ignores it and does not report it as invalid. Its bytes lie after every N, so they are not covered by any record.
 
-**What a checkpoint does not show.** The chain hash of line `count` is computed under 6.5, which removes the line's own `prev_hash` before hashing it. So `head` depends on that line's content and on nothing before it. A writer that rewrites an earlier line and re-links the line after it passes every check in this section, and a checkpoint taken afterwards signs the rewritten stream. `examples/checkpoint-vectors.json` carries such a stream as `known_limit_forged_prefix`, and the four records verify against it. A checkpoint therefore shows that the stream held the line at `count` with that content when the record was signed. It does not show that the lines before it are unchanged. Closing that gap needs a digest over the stream's prefix, which format v1 does not carry.
+**What a v1 checkpoint binds.** A signed record binds, under its key, the count of lines, the bytes of those lines (`prefix`), and the chain hash of the last of them (`head`). Consistency is the property that matters. Take two records `a` and `b` of one stream with `a.count` no greater than `b.count`. The stream as it stands must still hash to `a.prefix` through `a`'s N, and to `b.prefix` through `b`'s N. A verifier that holds an earlier record therefore detects every later change to the bytes that record covers, including a change the producer signs afterwards, because the earlier record was signed before the change. That includes a change to a line's `prev_hash` alone, which the 6.5 chain hash does not cover but `prefix` does.
 
-**Test vectors.** `examples/checkpoint-vectors.json` gives the public key, a three-line stream, four records (a `checkpoint`, a `resume`, a `close` and an unsigned `checkpoint`) with the signing input of each signed one, and the forged prefix above. The first record, quoted whole so a reader can see one, is:
+**What a v1 checkpoint does not bind.** (1) The bytes after N. A later record binds them, and no earlier one does. (2) Time. `at` is the writer's clock, and no record in v1 proves when it was taken. (3) Anything before the first record a verifier holds. A verifier holding one record cannot tell a rewrite before it from the original stream. Consistency needs an earlier record kept where the producer cannot write it, and this section does not define where that is. (4) What a producer chooses to sign. A producer that holds its own key can sign any bytes at any time, so the record proves consistency only against records a verifier kept. Section 6.5 is unchanged: its chain hash of one line still does not cover the lines before it. The `prefix` member is what covers them here.
+
+**Test vectors.** `examples/checkpoint-vectors.json` gives the public key, a three-line stream, four records (a `checkpoint`, a `resume`, a `close`, and an unsigned `checkpoint`) with the signing input of each signed one, and three negative variants that v1 MUST refuse. Each variant is a stream that passes the 6.5 chain on its own, so the chain cannot be what refuses it:
+
+- `forged_prefix`: line 1 rewritten and line 2 re-linked to it. Every record covers line 1, so every record is refused by `prefix`.
+- `prefix_only`: line 1 changed by one space after its first colon. Its JCS form, and so every chain hash, is unchanged. Only the bytes differ, so only `prefix` refuses, on every record.
+- `truncated`: the third line removed. Record 1 counts two lines and is accepted. The three records that count three are refused, because the stream is shorter than their N bytes.
+
+The first record, quoted whole so a reader can see one, is:
 
 ```json
-{"alg":"ES256","at":"2026-10-18T09:00:10.000Z","count":2,"head":"sha256:90a9c16cfc2efed1c225aa052b589ef32104fbd9e51e3e3a123e568cc1b47c90","kid":"ltxfPGZ7OZ8axCd3_X3CDgODPYqpGLw-aAKucokIIIE","kind":"checkpoint","prev":"sha256:0000000000000000000000000000000000000000000000000000000000000000","sig":"gi-_Set8samghIPUmxyzP0AsMw7P5VUeA6MbK2i4sAn2JhPggxTkxouI7_9w3TcGcXHkDwOI_xfZ0lVi32lSyQ","stream":"wardryx.ndjson","v":1}
+{"alg":"ES256","at":"2026-10-18T09:00:10.000Z","count":2,"head":"sha256:90a9c16cfc2efed1c225aa052b589ef32104fbd9e51e3e3a123e568cc1b47c90","kid":"FXG0i91Nag8j0ITnQFhO8mLmW8ijBkZvamjNsS9g1dE","kind":"checkpoint","prefix":"sha256:fd1a5891303a6b8fe8ed0a05d76392fe1e87ee0d3bb6f2083b264d923ee43dbe","prev":"sha256:0000000000000000000000000000000000000000000000000000000000000000","sig":"3MZreN0553P2J65w7QpmB82jMlMMx-m54y8EOda09DZqafwsxVfe5bpxx5cAIEzg24PgEjWOFIAZLwIVDnZCcg","stream":"wardryx.ndjson","v":1}
 ```
 
 ## 7. Conformance

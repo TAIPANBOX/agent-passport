@@ -1,11 +1,11 @@
 Feature: A producer's checkpoint says what its stream held, and no more
 
   @decided 2026-10-18: a producer signs a checkpoint over its stream, and the record
-  is fixed to the byte so two writers in two languages agree. What a checkpoint
-  proves is narrower than the design wanted: it names the line at its count, not the
-  lines before it (SPEC 6.5.1, "What a checkpoint does not show"). Each scenario below
-  names the gate that holds it. scripts/features-are-bound.sh refuses a scenario that
-  names none.
+  is fixed to the byte so two writers in two languages agree. A v1 checkpoint binds the
+  bytes of the stream through its count (the prefix member), so a rewritten earlier line
+  is refused by every later record that covers it, even when the chain still passes
+  (SPEC 6.5.1, "What a v1 checkpoint binds"). Each scenario below names the gate that
+  holds it. scripts/features-are-bound.sh refuses a scenario that names none.
 
   Scenario: every signed checkpoint verifies under the key its record names
     Given examples/checkpoint-vectors.json, whose records carry signatures and a public key
@@ -43,10 +43,22 @@ Feature: A producer's checkpoint says what its stream held, and no more
     Then it is found, so the quoted record cannot drift from the vector it shows
     # @gate: scripts/checkpoint-vectors.sh
 
-  Scenario: a forged earlier line still passes every checkpoint, and the gate says so
-    Given the known limit stream, whose first line is rewritten and whose second line is re-linked
+  Scenario: a forged earlier line is refused by every record that covers it, though the chain passes
+    Given the forged prefix stream, whose first line is rewritten and whose second line is re-linked
     When every checkpoint is checked against it
-    Then every checkpoint verifies, and the gate fails if a later format stops allowing that
+    Then the chain verifies on its own, and every record is refused because its prefix names other bytes
+    # @gate: scripts/checkpoint-vectors.sh
+
+  Scenario: a whitespace-only change to an earlier line is refused by the prefix alone
+    Given the prefix-only stream, whose first line differs from the honest one by one space
+    When every checkpoint is checked against it
+    Then every chain hash is unchanged, and every record is still refused by its prefix
+    # @gate: scripts/checkpoint-vectors.sh
+
+  Scenario: a truncated stream is refused by the records that count past its end, and accepted by the rest
+    Given the truncated stream, which has lost its third line
+    When each record is checked against it
+    Then the record that counts two lines is accepted, and the three that count three are refused as truncations
     # @gate: scripts/checkpoint-vectors.sh
 
   Scenario: the keyryx rows agree in SPEC 6.2 and README, and no example claims a keyryx event

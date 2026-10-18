@@ -696,23 +696,48 @@ sig = json.loads(json.load(open("examples/checkpoint-vectors.json"))["checkpoint
 edit("SPEC.md", sig, ("A" if sig[0] != "A" else "B") + sig[1:])')" \
 	"does not quote"
 
-run_case "checkpoint-vectors: the forged prefix is the honest stream, so it forges nothing" fail \
+run_case "checkpoint-vectors: the forged-prefix variant is the honest stream, so it tests nothing" fail \
 	'./scripts/checkpoint-vectors.sh' \
 	"$(py 'import json
 p = "examples/checkpoint-vectors.json"
 d = json.load(open(p))
-d["known_limit_forged_prefix"]["lines"] = d["stream"]["lines"]
+d["negative_variants"]["forged_prefix"]["lines"] = d["stream"]["lines"]
 json.dump(d, open(p, "w"), indent=2)')" \
-	"forges nothing"
+	"equals the honest stream"
 
-run_case "checkpoint-vectors: a later format closes the limit and the gate does not notice" fail \
+run_case "checkpoint-vectors: the prefix-only variant is the honest stream, so it tests nothing" fail \
 	'./scripts/checkpoint-vectors.sh' \
 	"$(py 'import json
 p = "examples/checkpoint-vectors.json"
 d = json.load(open(p))
-d["known_limit_forged_prefix"]["lines"][2] = d["known_limit_forged_prefix"]["lines"][2].replace("09:00:04", "09:00:09")
+d["negative_variants"]["prefix_only"]["lines"] = d["stream"]["lines"]
 json.dump(d, open(p, "w"), indent=2)')" \
-	"KNOWN LIMIT no longer holds"
+	"equals the honest stream"
+
+run_case "checkpoint-vectors: the truncated variant keeps every line, so it tests nothing" fail \
+	'./scripts/checkpoint-vectors.sh' \
+	"$(py 'import json
+p = "examples/checkpoint-vectors.json"
+d = json.load(open(p))
+d["negative_variants"]["truncated"]["lines"] = d["stream"]["lines"]
+json.dump(d, open(p, "w"), indent=2)')" \
+	"equals the honest stream"
+
+run_case "checkpoint-vectors: the first record names other bytes in its prefix" fail \
+	'./scripts/checkpoint-vectors.sh' \
+	"$(py 'import json
+p = "examples/checkpoint-vectors.json"
+d = json.load(open(p))
+r = json.loads(d["checkpoints"][0]["record"])
+r["prefix"] = "sha256:" + "1" * 64
+d["checkpoints"][0]["record"] = json.dumps(r, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+json.dump(d, open(p, "w"), indent=2)')" \
+	"prefix does not match"
+
+run_case "checkpoint-vectors: the gate stops comparing prefix, so the forged prefix is accepted" fail \
+	'./scripts/checkpoint-vectors.sh' \
+	"$(py 'edit("scripts/checkpoint-vectors.sh", "if obj.get(\"prefix\") != prefix_of(lines, count):", "if False:")')" \
+	"was not refused with"
 
 run_case "checkpoint-vectors: the vector file is gone" fail \
 	'./scripts/checkpoint-vectors.sh' \

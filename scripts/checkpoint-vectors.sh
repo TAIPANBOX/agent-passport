@@ -3,15 +3,25 @@
 # examples/checkpoint-vectors.json is the canonical serialization of its object,
 # every signature verifies under the key its `kid` names, every `prev` chains from
 # the genesis value, every `head` is the SPEC 6.5 chain hash of the stream line it
-# counts, and the record SPEC 6.5.1 quotes is the first vector.
+# counts, every `prefix` is the SHA-256 of the stream's bytes through that line,
+# and the record SPEC 6.5.1 quotes is the first vector.
+#
+# THE NEGATIVE VARIANTS ARE PART OF THE CONTRACT
+#
+# negative_variants holds three streams that SPEC 6.5.1 says v1 must refuse: a
+# forged earlier line with its successor re-linked, a whitespace-only change to an
+# earlier line, and a truncated stream. Each one is a stream that passes the 6.5
+# chain on its own, so the chain cannot be what refuses it. The gate requires that
+# the stream chains, and that exactly the records named for it are refused, with
+# the reason named, and every other record is accepted. A v1 verifier that accepted
+# any of them would be wrong, and so would a gate that stopped checking.
 #
 # WHY THIS EXISTS
 #
 # SPEC 6.5.1 promises that a Go writer and a Rust writer produce the same bytes.
 # Prose cannot hold that promise: two implementations agree only where they have
 # been run against the same bytes. The vectors are those bytes, and this gate is
-# the one place that re-derives every one of them from the stream and the key, so
-# a vector that stops reproducing turns CI red here before any writer reads it.
+# the one place that re-derives every one of them from the stream and the key.
 #
 # WHAT IT READS
 #
@@ -23,24 +33,17 @@
 #
 # It does not prove the signing key was honest; it proves the signatures verify
 # under the public key the vectors carry. It canonicalizes only the subset these
-# vectors use (ASCII strings, integers, objects, arrays), and it refuses anything
+# vectors use (ASCII strings, integers, objects, arrays) and refuses anything
 # outside that subset rather than guessing at RFC 8785's number rules. It does not
-# check that a key statement certifies the key: that statement belongs to the
-# service that certifies keys, and no vector in this repository contains one.
-#
-# THE KNOWN LIMIT IS CHECKED, NOT ASSUMED
-#
-# known_limit_forged_prefix is a stream whose first line was rewritten and whose
-# second line was re-linked to it. Every checkpoint still verifies against it,
-# because a line's hash does not cover its own prev_hash. This gate asserts that
-# fact. If a later format closes the gap, this assertion fails and forces SPEC
-# 6.5.1 to be rewritten with it, rather than leaving the limit described in prose
-# that nothing measures.
+# check that a key statement certifies the key: that belongs to the service that
+# certifies keys, and no vector here contains one. It does not check consistency
+# across records written by different producers; it checks each record against the
+# stream it is given.
 #
 # It refuses to report success when it measured nothing: no vector file, no 6.5.1
-# heading, no stream line, no record, no signed record verified, or no openssl to
-# verify a signature with. OPENSSL may name another binary (the teeth harness
-# uses that to prove the refusal).
+# heading, no stream line, no record, no signed record verified, no negative
+# variant, or no openssl to verify a signature with. OPENSSL may name another
+# binary (the teeth harness uses that to prove the refusal).
 
 set -uo pipefail
 cd "$(git rev-parse --show-toplevel)" || exit 1
@@ -63,18 +66,12 @@ VECTORS = pathlib.Path("examples/checkpoint-vectors.json")
 SPEC = pathlib.Path("SPEC.md")
 GENESIS = "sha256:" + "0" * 64
 KINDS = {"checkpoint", "close", "resume"}
-COMMON = {"v", "kind", "stream", "count", "head", "at", "prev"}
+COMMON = {"v", "kind", "stream", "count", "head", "prefix", "at", "prev"}
 SIGNED = {"alg", "kid", "sig"}
 UNSIGNED = {"unsigned_reason"}
 STREAM_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*\.ndjson$")
 AT = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$")
 HASH = re.compile(r"^sha256:[0-9a-f]{64}$")
-
-problems = []
-
-
-def fail(msg):
-    problems.append(msg)
 
 
 def measured_nothing(msg):
@@ -97,14 +94,14 @@ try:
 except json.JSONDecodeError as e:
     print(f"FAIL: examples/checkpoint-vectors.json is not valid JSON ({e})")
     sys.exit(1)
+if not isinstance(vec, dict):
+    measured_nothing("the vector file is not a JSON object")
 
 
 # ------------------------------------------------------------- canonical JSON
 
 def check_subset(value, where):
-    if isinstance(value, bool) or value is None:
-        return
-    if isinstance(value, int):
+    if isinstance(value, bool) or value is None or isinstance(value, int):
         return
     if isinstance(value, float):
         raise ValueError(f"{where}: a float, outside the subset this gate canonicalizes")
@@ -135,6 +132,13 @@ def chain_hash(line_obj):
     return "sha256:" + hashlib.sha256(jcs(body)).hexdigest()
 
 
+def prefix_of(lines, count):
+    # SPEC 6.5.1 prefix: SHA-256 of the stream file's bytes through line `count`,
+    # each line followed by its LF. The file is exactly these lines, in order.
+    data = "".join(line + "\n" for line in lines[:count]).encode()
+    return "sha256:" + hashlib.sha256(data).hexdigest()
+
+
 def b64u_encode(raw):
     return base64.urlsafe_b64encode(raw).rstrip(b"=").decode()
 
@@ -145,31 +149,46 @@ def b64u_decode(text):
 
 # -------------------------------------------------------------- the public key
 
-key = vec.get("key") if isinstance(vec, dict) else None
+key = vec.get("key")
 if not isinstance(key, dict):
     measured_nothing("the vector file carries no key")
 if key.get("crv") != "P-256" or key.get("kty") != "EC":
-    fail("key is not an EC P-256 key (crv and kty must say P-256 and EC)")
+    print("FAIL: key is not an EC P-256 key (crv and kty must say P-256 and EC)")
+    sys.exit(1)
 try:
     x = b64u_decode(key["x"])
     y = b64u_decode(key["y"])
-except (KeyError, ValueError) as e:
+except (KeyError, ValueError, TypeError) as e:
     measured_nothing(f"the key's x and y do not decode ({e})")
 if len(x) != 32 or len(y) != 32:
-    fail("key x and y are not 32 bytes each")
+    print("FAIL: key x and y are not 32 bytes each")
+    sys.exit(1)
 thumb = b64u_encode(hashlib.sha256(jcs({"crv": "P-256", "kty": "EC", "x": key["x"], "y": key["y"]})).digest())
 if key.get("kid") != thumb:
-    fail(f"key kid {key.get('kid')!r} is not the RFC 7638 thumbprint of its own x and y ({thumb})")
+    print(f"FAIL: key kid {key.get('kid')!r} is not the RFC 7638 thumbprint of its own x and y ({thumb})")
+    sys.exit(1)
 SPKI_P256 = bytes.fromhex("3059301306072a8648ce3d020106082a8648ce3d030107034200")
 
+# Lives for the whole run: every signature below is checked against this file.
+PEM_DIR = tempfile.TemporaryDirectory(prefix="checkpoint-vectors-")
 
-def public_pem(tmp):
-    der = os.path.join(tmp, "pub.der")
-    pem = os.path.join(tmp, "pub.pem")
+
+def public_pem():
+    der = os.path.join(PEM_DIR.name, "pub.der")
+    pem = os.path.join(PEM_DIR.name, "pub.pem")
     open(der, "wb").write(SPKI_P256 + b"\x04" + x + y)
     subprocess.run([OPENSSL, "pkey", "-pubin", "-inform", "DER", "-in", der, "-out", pem],
                    check=True, capture_output=True)
     return pem
+
+
+try:
+    PEM = public_pem()
+except FileNotFoundError:
+    measured_nothing(f"{OPENSSL!r} is not on this machine, so no signature can be verified")
+except subprocess.CalledProcessError as e:
+    measured_nothing(f"{OPENSSL!r} could not load the vector public key "
+                     f"({e.stderr.decode(errors='replace').strip()[:120]})")
 
 
 def raw_to_der(raw):
@@ -183,83 +202,77 @@ def raw_to_der(raw):
     return b"\x30" + bytes([len(seq)]) + seq
 
 
-def verifies(message, raw_sig, pem, tmp):
-    inp = os.path.join(tmp, "msg")
-    sig = os.path.join(tmp, "sig.der")
+def verifies(message, raw_sig):
+    inp = os.path.join(PEM_DIR.name, "msg")
+    sig = os.path.join(PEM_DIR.name, "sig.der")
     open(inp, "wb").write(message)
     open(sig, "wb").write(raw_to_der(raw_sig))
-    res = subprocess.run([OPENSSL, "dgst", "-sha256", "-verify", pem, "-signature", sig, inp],
+    res = subprocess.run([OPENSSL, "dgst", "-sha256", "-verify", PEM, "-signature", sig, inp],
                          capture_output=True, text=True)
     return res.returncode == 0
 
 
-# Lives for the whole run: every signature below is checked against this file.
-PEM_DIR = tempfile.TemporaryDirectory(prefix="checkpoint-vectors-")
-try:
-    PEM = public_pem(PEM_DIR.name)
-except FileNotFoundError:
-    measured_nothing(f"{OPENSSL!r} is not on this machine, so no signature can be verified")
-except subprocess.CalledProcessError as e:
-    measured_nothing(f"{OPENSSL!r} could not load the vector public key ({e.stderr.decode(errors='replace').strip()[:120]})")
+# ------------------------------------------------------- stream and records
+
+def stream_problems(name, lines):
+    """The stream's own SPEC 6.5 chain. Returns (problems, heads)."""
+    problems = []
+    heads = []
+    prev_obj = None
+    for i, line in enumerate(lines):
+        try:
+            obj = json.loads(line)
+        except json.JSONDecodeError as e:
+            problems.append(f"{name} line {i + 1} is not JSON ({e})")
+            heads.append(None)
+            prev_obj = None
+            continue
+        if not isinstance(obj, dict):
+            problems.append(f"{name} line {i + 1} is not a JSON object")
+            heads.append(None)
+            prev_obj = None
+            continue
+        if i == 0:
+            if "prev_hash" in obj:
+                problems.append(f"{name} line 1 carries a prev_hash, so it is not the head of its chain")
+        elif prev_obj is None or obj.get("prev_hash") != chain_hash(prev_obj):
+            problems.append(f"{name} line {i + 1} prev_hash does not chain from line {i}")
+        heads.append(chain_hash(obj))
+        prev_obj = obj
+    return problems, heads
 
 
-# ----------------------------------------------------------------- the stream
-
-stream = vec.get("stream") if isinstance(vec, dict) else None
-if not isinstance(stream, dict) or not isinstance(stream.get("lines"), list) or not stream["lines"]:
-    measured_nothing("the vector file carries no stream lines")
-STREAM = stream.get("name")
-if not isinstance(STREAM, str) or not STREAM_NAME.match(STREAM):
-    fail(f"stream name {STREAM!r} is not a plain *.ndjson file name")
-heads = []
-prev_obj = None
-for i, line in enumerate(stream["lines"]):
-    try:
-        obj = json.loads(line)
-    except json.JSONDecodeError as e:
-        fail(f"stream line {i + 1} is not JSON ({e})")
-        heads.append(None)
-        continue
-    if i == 0:
-        if "prev_hash" in obj:
-            fail("stream line 1 carries a prev_hash, so it is not the head of its chain")
-    elif obj.get("prev_hash") != chain_hash(prev_obj):
-        fail(f"stream line {i + 1} prev_hash does not chain from line {i}")
-    heads.append(chain_hash(obj))
-    prev_obj = obj
-
-
-# ---------------------------------------------------------------- the records
-
-records = vec.get("checkpoints")
-if not isinstance(records, list) or not records:
-    measured_nothing("the vector file carries no checkpoint records")
-
-signed_verified = 0
-unsigned = 0
-prev_bytes = None
-with tempfile.TemporaryDirectory() as tmp:
+def record_problems(lines, heads, STREAM):
+    """Every record checked against one stream. Returns {index: [problem, ...]}."""
+    out = {}
+    records = vec["checkpoints"]
+    prev_bytes = None
     for i, c in enumerate(records):
+        probs = out.setdefault(i, [])
         where = f"checkpoint record {i + 1}"
         record = c.get("record") if isinstance(c, dict) else None
         if not isinstance(record, str):
-            fail(f"{where} has no record text")
+            probs.append(f"{where} has no record text")
+            prev_bytes = None
             continue
         try:
             obj = json.loads(record)
         except json.JSONDecodeError as e:
-            fail(f"{where} is not JSON ({e})")
+            probs.append(f"{where} is not JSON ({e})")
+            prev_bytes = record.encode()
             continue
         if not isinstance(obj, dict):
-            fail(f"{where} is not a JSON object")
+            probs.append(f"{where} is not a JSON object")
+            prev_bytes = record.encode()
             continue
         try:
             canonical = jcs(obj, where)
         except ValueError as e:
-            fail(str(e))
+            probs.append(str(e))
+            prev_bytes = record.encode()
             continue
         if canonical.decode() != record:
-            fail(f"{where} is not the canonical serialization of its object (RFC 8785 order and whitespace)")
+            probs.append(f"{where} is not the canonical serialization of its object (RFC 8785 order and whitespace)")
 
         members = set(obj)
         if members == COMMON | SIGNED:
@@ -269,102 +282,141 @@ with tempfile.TemporaryDirectory() as tmp:
         else:
             extra = sorted(members - COMMON - SIGNED - UNSIGNED)
             missing = sorted(COMMON - members)
-            fail(f"{where} has members outside format v1 (extra {extra}, missing {missing}); "
-                 "a signed record has alg, kid and sig, an unsigned one has unsigned_reason")
-            continue
+            probs.append(f"{where} has members outside format v1 (extra {extra}, missing {missing}); "
+                         "a signed record has alg, kid and sig, an unsigned one has unsigned_reason")
+            is_signed = None
 
         if obj.get("v") != 1 or isinstance(obj.get("v"), bool):
-            fail(f"{where} has v other than 1")
+            probs.append(f"{where} has v other than 1")
         if obj.get("kind") not in KINDS:
-            fail(f"{where} has kind {obj.get('kind')!r}, which is not checkpoint, close or resume")
+            probs.append(f"{where} has kind {obj.get('kind')!r}, which is not checkpoint, close or resume")
         if obj.get("stream") != STREAM:
-            fail(f"{where} names stream {obj.get('stream')!r}, not {STREAM!r}")
+            probs.append(f"{where} names stream {obj.get('stream')!r}, not {STREAM!r}")
+
         count = obj.get("count")
-        if not isinstance(count, int) or isinstance(count, bool) or count < 1:
-            fail(f"{where} has count {count!r}, which is not an integer of at least 1")
-        elif count > len(stream["lines"]):
-            fail(f"{where} counts {count} lines, but the stream holds {len(stream['lines'])}")
-        elif heads[count - 1] is None:
-            pass
-        elif obj.get("head") != heads[count - 1]:
-            fail(f"{where} head does not equal the chain hash of line {count} under 6.5")
+        count_ok = isinstance(count, int) and not isinstance(count, bool) and count >= 1
+        if not count_ok:
+            probs.append(f"{where} has count {count!r}, which is not an integer of at least 1")
+        elif count > len(lines):
+            probs.append(f"{where} is refused: the stream is shorter than the record's N bytes "
+                         f"(it holds {len(lines)} lines, the record counts {count}), so the record is a truncation")
+        else:
+            if heads[count - 1] is not None and obj.get("head") != heads[count - 1]:
+                probs.append(f"{where} head does not equal the chain hash of line {count} under 6.5")
+            if obj.get("prefix") != prefix_of(lines, count):
+                probs.append(f"{where} prefix does not match the SHA-256 of the first N bytes of the stream "
+                             f"(N is the offset after line {count}'s LF)")
+
         if not isinstance(obj.get("head"), str) or not HASH.match(obj["head"]):
-            fail(f"{where} head is not sha256 followed by 64 lowercase hex digits")
+            probs.append(f"{where} head is not sha256 followed by 64 lowercase hex digits")
+        if not isinstance(obj.get("prefix"), str) or not HASH.match(obj["prefix"]):
+            probs.append(f"{where} prefix is not sha256 followed by 64 lowercase hex digits")
         if not isinstance(obj.get("at"), str) or not AT.match(obj["at"]):
-            fail(f"{where} at is not in the form YYYY-MM-DDTHH:MM:SS.sssZ")
+            probs.append(f"{where} at is not in the form YYYY-MM-DDTHH:MM:SS.sssZ")
 
         expected_prev = GENESIS if prev_bytes is None else "sha256:" + hashlib.sha256(prev_bytes).hexdigest()
         if obj.get("prev") != expected_prev:
-            fail(f"{where} prev does not chain from the record before it")
+            probs.append(f"{where} prev does not chain from the record before it")
         prev_bytes = record.encode()
 
-        if is_signed:
+        if is_signed is True:
             if obj.get("alg") != "ES256":
-                fail(f"{where} alg is not ES256")
+                probs.append(f"{where} alg is not ES256")
             if obj.get("kid") != key.get("kid"):
-                fail(f"{where} kid is not the vector key's kid")
+                probs.append(f"{where} kid is not the vector key's kid")
             try:
                 raw = b64u_decode(obj["sig"])
-            except (ValueError, TypeError):
-                fail(f"{where} sig is not base64url")
+            except (ValueError, TypeError, KeyError):
+                probs.append(f"{where} sig is not base64url")
                 continue
             if len(raw) != 64:
-                fail(f"{where} sig is {len(raw)} bytes, not 64 (r and s, 32 bytes each)")
+                probs.append(f"{where} sig is {len(raw)} bytes, not 64 (r and s, 32 bytes each)")
                 continue
             signing = jcs({k: v for k, v in obj.items() if k != "sig"}, where)
             if "signing_input" in c and c["signing_input"] != signing.decode():
-                fail(f"{where} signing_input is not the JCS of the record without sig")
-            if verifies(signing, raw, PEM, tmp):
-                signed_verified += 1
-            else:
-                fail(f"{where} signature does not verify under the key its kid names")
-        else:
-            unsigned += 1
+                probs.append(f"{where} signing_input is not the JCS of the record without sig")
+            if not verifies(signing, raw):
+                probs.append(f"{where} signature does not verify under the key its kid names")
+        elif is_signed is False:
             if obj.get("unsigned_reason") != "key_expired":
-                fail(f"{where} unsigned_reason {obj.get('unsigned_reason')!r} is not key_expired, the only v1 value")
+                probs.append(f"{where} unsigned_reason {obj.get('unsigned_reason')!r} is not key_expired, "
+                             "the only v1 value")
             if "signing_input" in c:
-                fail(f"{where} is unsigned but carries a signing_input")
+                probs.append(f"{where} is unsigned but carries a signing_input")
+    return out
 
-if signed_verified == 0:
-    measured_nothing("no signed checkpoint record verified, so no signature was checked")
+
+problems = []
+STREAM_BLOCK = vec.get("stream")
+if not isinstance(STREAM_BLOCK, dict) or not isinstance(STREAM_BLOCK.get("lines"), list) \
+        or not STREAM_BLOCK["lines"]:
+    measured_nothing("the vector file carries no stream lines")
+STREAM = STREAM_BLOCK.get("name")
+if not isinstance(STREAM, str) or not STREAM_NAME.match(STREAM):
+    problems.append(f"stream name {STREAM!r} is not a plain *.ndjson file name")
+honest = STREAM_BLOCK["lines"]
+
+records = vec.get("checkpoints")
+if not isinstance(records, list) or not records:
+    measured_nothing("the vector file carries no checkpoint records")
+signed_count = sum(1 for c in records if isinstance(c, dict) and "signing_input" in c)
+
+stream_probs, heads = stream_problems("the stream", honest)
+problems.extend(stream_probs)
+per_record = record_problems(honest, heads, STREAM)
+for i, probs in per_record.items():
+    problems.extend(probs)
+if signed_count == 0:
+    measured_nothing("no signed checkpoint record to verify a signature with")
 
 # The quote SPEC 6.5.1 carries must be the first vector, byte for byte.
 first = records[0].get("record") if isinstance(records[0], dict) else None
 if not first or first not in spec:
-    fail("SPEC 6.5.1 does not quote the first checkpoint record of examples/checkpoint-vectors.json")
+    problems.append("SPEC 6.5.1 does not quote the first checkpoint record of examples/checkpoint-vectors.json")
 if "examples/checkpoint-vectors.json" not in spec:
-    fail("SPEC 6.5.1 does not name examples/checkpoint-vectors.json as its vector file")
+    problems.append("SPEC 6.5.1 does not name examples/checkpoint-vectors.json as its vector file")
 
-# The known limit: the forged prefix must still verify, and must differ from the honest stream.
-limit = vec.get("known_limit_forged_prefix")
-forged = limit.get("lines") if isinstance(limit, dict) else None
-if not isinstance(forged, list) or not forged:
-    measured_nothing("the vector file carries no known_limit_forged_prefix")
-if forged == stream["lines"]:
-    fail("known_limit_forged_prefix equals the honest stream, so it forges nothing")
-else:
-    forged_heads = []
-    fprev = None
-    chain_ok = True
-    for i, line in enumerate(forged):
-        fobj = json.loads(line)
-        if i > 0 and fobj.get("prev_hash") != chain_hash(fprev):
-            chain_ok = False
-        forged_heads.append(chain_hash(fobj))
-        fprev = fobj
-    if not chain_ok:
-        fail("known_limit_forged_prefix does not chain, so it is not the limit SPEC 6.5.1 describes")
-    for i, c in enumerate(records):
-        if not isinstance(c, dict) or "record" not in c:
-            continue
-        robj = json.loads(c["record"])
-        if isinstance(robj.get("count"), int) and 1 <= robj["count"] <= len(forged):
-            if robj.get("head") != forged_heads[robj["count"] - 1]:
-                fail(f"KNOWN LIMIT no longer holds: checkpoint record {i + 1} rejects the forged prefix, "
-                     "so SPEC 6.5.1 and this check must be rewritten together")
-                break
-    if not any("KNOWN LIMIT" in p for p in problems):
-        print("known limit reproduced: every checkpoint verifies against the forged prefix (SPEC 6.5.1)")
+# The negative variants: each stream chains on its own, and v1 refuses exactly the
+# records named for it, for the reason named, and accepts the rest.
+variants = vec.get("negative_variants")
+if not isinstance(variants, dict) or not variants:
+    measured_nothing("the vector file carries no negative_variants")
+variant_checks = 0
+for vname, v in sorted(variants.items()):
+    vlines = v.get("lines") if isinstance(v, dict) else None
+    refused = v.get("refused") if isinstance(v, dict) else None
+    accepted = v.get("accepted") if isinstance(v, dict) else None
+    if not isinstance(vlines, list) or not vlines or not isinstance(refused, dict) or not isinstance(accepted, list):
+        problems.append(f"negative variant {vname!r} is malformed")
+        continue
+    if vlines == honest:
+        problems.append(f"negative variant {vname!r} equals the honest stream, so it tests nothing")
+        continue
+    chain_probs, vheads = stream_problems(f"variant {vname!r}", vlines)
+    if chain_probs:
+        problems.append(f"negative variant {vname!r} does not pass the SPEC 6.5 chain on its own, "
+                        f"so it does not isolate what it is meant to: {chain_probs[0]}")
+        continue
+    got = record_problems(vlines, vheads, STREAM)
+    named = set(refused) | {str(a) for a in accepted}
+    if named != {str(i) for i in range(len(records))}:
+        problems.append(f"negative variant {vname!r} does not name every record exactly once")
+        continue
+    for idx_s, reason in sorted(refused.items()):
+        idx = int(idx_s)
+        msgs = got.get(idx, [])
+        if not any(reason in m for m in msgs):
+            problems.append(f"negative variant {vname!r}: record {idx + 1} was not refused with {reason!r} "
+                            f"(v1 must refuse it; got {msgs[:1] or 'no problem at all'})")
+        variant_checks += 1
+    for idx in accepted:
+        msgs = got.get(int(idx), [])
+        if msgs:
+            problems.append(f"negative variant {vname!r}: record {int(idx) + 1} was expected to be accepted "
+                            f"and was refused: {msgs[0]}")
+        variant_checks += 1
+if variant_checks == 0:
+    measured_nothing("no negative variant was checked")
 
 if problems:
     print(f"FAIL: {len(problems)} checkpoint vector problem(s):")
@@ -372,7 +424,7 @@ if problems:
         print(f"  - {p}")
     sys.exit(1)
 
-print(f"OK: {len(records)} checkpoint records ({signed_verified} signed and verified with openssl, "
-      f"{unsigned} unsigned) over a {len(stream['lines'])}-line stream; every head, prev and "
-      f"canonical form reproduces, and SPEC 6.5.1 quotes the first record.")
+print(f"OK: {len(records)} checkpoint records ({signed_count} signed and verified with openssl) over a "
+      f"{len(honest)}-line stream; every head, prefix, prev and canonical form reproduces; "
+      f"{len(variants)} negative variant(s) refused exactly as named; SPEC 6.5.1 quotes the first record.")
 PY

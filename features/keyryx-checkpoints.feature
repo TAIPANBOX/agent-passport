@@ -64,5 +64,5 @@ Feature: A producer's checkpoint says what its stream held, and no more
   Scenario: the keyryx rows agree in SPEC 6.2 and README, and no example claims a keyryx event
     Given the keyryx row and the agent-conform row in SPEC 6.2 and in README
     When both copies are compared, and every example event is read against the registry
-    Then the copies agree, keyryx stays reserved, and no example attributes an event to it
+    Then the copies agree, keyryx is an emitting source with the seven witness types, and no example attributes an event to it
     # @gate: scripts/artifacts-match-registry.sh

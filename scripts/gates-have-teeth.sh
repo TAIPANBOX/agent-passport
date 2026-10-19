@@ -489,6 +489,37 @@ assert "maxLength" in sch, "agent_id carries no maxLength to raise"
 sch["maxLength"] = sch["maxLength"] * 2
 json.dump(d, open(p, "w"), indent=2)')"
 
+# The wardryx identity_mismatch pair (SPEC 6.2, the wardryx row, @decided
+# 2026-10-19). The two faults and the non-fault below are the ones the feature
+# file names: the row must accept the pair from wardryx, must refuse it from any
+# other source, and README's copy of the row must agree with SPEC's. The
+# mutation appends one example line and nothing else; it is restored after.
+run_case "artifacts-match-registry: a wardryx identity_mismatch line is accepted" pass \
+	'./scripts/artifacts-match-registry.sh' \
+	"$(py 'import json
+p = "examples/events.ndjson"
+s = open(p).read()
+if not s.endswith("\n"):
+    s += "\n"
+s += json.dumps({"schema": "taipanbox.dev/agent-event/v1.0", "ts": "2026-10-19T09:00:00.000Z", "source": "wardryx", "type": "identity_mismatch", "severity": "high", "agent_id": "agent://wardryx.internal/auth/agent-token", "data": {}}) + "\n"
+open(p, "w").write(s)')"
+
+run_case "artifacts-match-registry: identity_mismatch attributed to idryx is refused" fail \
+	'./scripts/artifacts-match-registry.sh' \
+	"$(py 'import json
+p = "examples/events.ndjson"
+s = open(p).read()
+if not s.endswith("\n"):
+    s += "\n"
+s += json.dumps({"schema": "taipanbox.dev/agent-event/v1.0", "ts": "2026-10-19T09:00:00.000Z", "source": "idryx", "type": "identity_mismatch", "severity": "high", "agent_id": "agent://idryx.internal/detector", "data": {}}) + "\n"
+open(p, "w").write(s)')" \
+	"whose SPEC 6.2 row does not list it"
+
+run_case "artifacts-match-registry: README's copy drops the wardryx identity_mismatch" fail \
+	'./scripts/artifacts-match-registry.sh' \
+	"$(py 'edit("README.md", "`agent_assertion_refused` (high) · `identity_mismatch` (high)", "`agent_assertion_refused` (high)")')" \
+	"README.md's copy does not"
+
 echo
 echo "=== and the one this estate learned the hard way ==="
 echo "    a gate whose subject is gone must SAY so, not report OK on nothing"

@@ -253,8 +253,8 @@ an absent invariant.
    not the change this file's escalation rule is about: nothing is committed,
    the tree is asserted clean before the run reports success, and a run that
    left residue fails instead. A spec change is still a decision for the user.
-   *(gate: `scripts/gates-have-teeth.sh`, 68 cases: forty-five real faults each
-   gate must catch, eleven non-faults they must not, and twelve subjects taken
+   *(gate: `scripts/gates-have-teeth.sh`, 71 cases: forty-seven real faults each
+   gate must catch, twelve non-faults they must not, and twelve subjects taken
    away entirely. The non-faults are the ones worth keeping: prose that names
    something no schema declares is deliberately allowed by invariant 2's
    half-surface, and a raised ceiling is the widening 6.4 promises.)*

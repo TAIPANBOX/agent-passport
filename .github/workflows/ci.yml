@@ -47,6 +47,9 @@ jobs:
       - name: checkpoint vectors reproduce from the stream and the public key
         run: ./scripts/checkpoint-vectors.sh
 
+      - name: no pipe ends in a grep that leaves early
+        run: ./scripts/no-reader-leaves-a-pipe-early.sh
+
       # Last, because it mutates tracked files, including schemas/ and SPEC.md,
       # and restores them. Nothing is committed and the tree is asserted clean
       # before it reports success. It needs a clean tree and says so plainly,

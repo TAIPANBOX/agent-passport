@@ -793,7 +793,7 @@ self-protection, not third-party or adversarial traffic.
 | `engram` | `memory_written` · `reflection_run` · `contradiction_found` · `memory_forgotten` |
 | `idryx` | `identity_finding` (severity per finding) |
 | `qryx` | `crypto_finding` · `crypto_drift` · `policy_violation` · `evidence_signed` |
-| `wardryx` | `policy_allow` (info) · `policy_deny` (high) · `approval_requested` (medium) · `approval_granted` (info) · `approval_denied` (high) · `approval_timeout` (high) · `approval_unanswered` (high) · `policy_updated` (high) · `agent_assertion_refused` (high) · `identity_mismatch` (high) |
+| `wardryx` | `policy_allow` (info) · `policy_deny` (high) · `approval_requested` (medium) · `approval_granted` (info) · `approval_denied` (high) · `approval_timeout` (high) · `approval_unanswered` (high) · `approval_queue_full` (high) · `policy_updated` (high) · `policy_loaded` (info) · `agent_assertion_refused` (high) · `identity_mismatch` (high) |
 | `verdryx` | `eval_run` (info) · `quality_score` (info) · `quality_drift` (high) · `slo_burn` (high) |
 | `mockryx` | `sim_run` (info) · `sim_finding` (high) · `blast_radius_measured` (medium) |
 | `console` | `console_command` |
@@ -981,8 +981,8 @@ undecided: nothing decayed, nobody answered. Until 2026-08-03 only the first
 existed, so an agent blocked on an unwatched queue produced no event at all,
 and the name that sounded like it covered that case did not.
 
-`policy_updated` is the one wardryx type with no governed agent behind it. It
-fires from the admin-only policy-as-code routes, `PUT` and `DELETE
+`policy_updated` and `policy_loaded` are the two wardryx types with no governed
+agent behind them. `policy_updated` fires from the admin-only policy-as-code routes, `PUT` and `DELETE
 /v1/policies/{id}` in `internal/api/api.go` (`evPolicyUpdated`), reporting an
 operator changing the rules rather than an agent doing anything, so
 `agent_id` carries a synthetic identity instead,
@@ -991,6 +991,22 @@ well-formed subject rather than leaving the field empty or borrowing an
 unrelated agent's id. `data` carries `action` (`put` or `delete`),
 `policy_id`, `policy_version`, and `decided_by`; both emission sites set
 `severity: high`.
+
+`policy_loaded` records the policy set a process decides under. A wardryx writes
+it once at start, after its stored policies are restored and before its first
+request, because a policy file is read at start and nothing else records it: an
+edit of the file would otherwise leave no trace between two decisions that happen
+to name different versions. `agent_id` is the same synthetic identity as
+`policy_updated`, `severity` is `info`, and `data` carries `policy_version`,
+`policies`, `base_policies` and `no_grant_floors`, the names of the policies that
+hold a tool call nothing grants.
+
+`approval_queue_full` says an agent reached the limit on pending approvals. A
+wardryx writes it the first time that agent reaches the limit in a process and
+not again, so an agent in a loop cannot fill the record with the news that it is
+in a loop. `agent_id` is that agent, `severity` is `high`, and `data` carries
+`pending_limit`. It reports the queue and not a decision: the holds that follow
+stay holds and stay recorded, and they add no row a person can answer.
 
 `policy_deny` appears under two sources on purpose. The same fact, an action
 refused by policy, is decided in two places: at the policy plane by wardryx,

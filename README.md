@@ -292,7 +292,7 @@ Registered sources today:
 | `engram` | memory governance | `memory_written` · `reflection_run` · `contradiction_found` · `memory_forgotten` |
 | `idryx` | identity and access governance | `identity_finding` (severity per finding) |
 | `qryx` | cryptographic evidence | `crypto_finding` · `crypto_drift` · `policy_violation` · `evidence_signed` |
-| `wardryx` | policy and approval gating (wave 2) | `policy_allow` (info) · `policy_deny` (high) · `approval_requested` (medium) · `approval_granted` (info) · `approval_denied` (high) · `approval_timeout` (high) · `approval_unanswered` (high) · `policy_updated` (high) · `agent_assertion_refused` (high) · `identity_mismatch` (high) |
+| `wardryx` | policy and approval gating (wave 2) | `policy_allow` (info) · `policy_deny` (high) · `approval_requested` (medium) · `approval_granted` (info) · `approval_denied` (high) · `approval_timeout` (high) · `approval_unanswered` (high) · `approval_expired` (medium) · `approval_withdrawn` (info) · `policy_updated` (high) · `agent_assertion_refused` (high) · `identity_mismatch` (high) |
 | `verdryx` | evaluation and quality drift (wave 2) | `eval_run` (info) · `quality_score` (info) · `quality_drift` (high) · `slo_burn` (high) |
 | `mockryx` | simulation and blast-radius testing (wave 2) | `sim_run` (info) · `sim_finding` (high) · `blast_radius_measured` (medium) |
 | `console` | the operator console's own privileged actions (Genaryx) | `console_command` |
@@ -326,6 +326,9 @@ against every producer's code on 2026-08-03, and carries the reasoning.
 fires when an agent redeems an approval whose window has closed, which usually
 means a human did decide and the agent came back late. The second fires when a
 hold has simply sat undecided: nothing decayed, nobody answered.
+`approval_expired` and `approval_withdrawn` close a hold nobody decided: wardryx
+closed it after its hold lifetime, or the held agent withdrew it. Neither is a
+person's decision, so neither is `approval_denied`.
 
 The first four TokenFuse types are its existing incident taxonomy
 verbatim, zero renaming. Consumers MUST accept events whose `schema` is

@@ -793,7 +793,7 @@ self-protection, not third-party or adversarial traffic.
 | `engram` | `memory_written` · `reflection_run` · `contradiction_found` · `memory_forgotten` |
 | `idryx` | `identity_finding` (severity per finding) |
 | `qryx` | `crypto_finding` · `crypto_drift` · `policy_violation` · `evidence_signed` |
-| `wardryx` | `policy_allow` (info) · `policy_deny` (high) · `approval_requested` (medium) · `approval_granted` (info) · `approval_denied` (high) · `approval_timeout` (high) · `approval_unanswered` (high) · `policy_updated` (high) · `agent_assertion_refused` (high) · `identity_mismatch` (high) |
+| `wardryx` | `policy_allow` (info) · `policy_deny` (high) · `approval_requested` (medium) · `approval_granted` (info) · `approval_denied` (high) · `approval_timeout` (high) · `approval_unanswered` (high) · `approval_expired` (medium) · `approval_withdrawn` (info) · `policy_updated` (high) · `agent_assertion_refused` (high) · `identity_mismatch` (high) |
 | `verdryx` | `eval_run` (info) · `quality_score` (info) · `quality_drift` (high) · `slo_burn` (high) |
 | `mockryx` | `sim_run` (info) · `sim_finding` (high) · `blast_radius_measured` (medium) |
 | `console` | `console_command` |
@@ -980,6 +980,17 @@ the agent came back late. The second fires when a hold has simply sat
 undecided: nothing decayed, nobody answered. Until 2026-08-03 only the first
 existed, so an agent blocked on an unwatched queue produced no event at all,
 and the name that sounded like it covered that case did not.
+
+`approval_expired` and `approval_withdrawn` close a hold nobody decided, and
+neither is a decision by a person. `approval_expired` fires when wardryx closes a
+pending hold that has waited longer than its hold lifetime (`WARDRYX_HOLD_TTL`):
+no token exists for it, the agent's call stays refused, and its place in the
+agent's queue is freed. `approval_withdrawn` fires when the agent that was held
+withdraws its own pending hold (same agent, run and org). Both carry
+`approval_id` in `data`; `approval_expired` also carries `waited_seconds`. A
+hold closed either way is not `approval_denied`: denied means a person said no.
+They differ from `approval_unanswered`, which reports a hold that is still
+open, and from `approval_timeout`, which reports a token redeemed too late.
 
 `policy_updated` is the one wardryx type with no governed agent behind it. It
 fires from the admin-only policy-as-code routes, `PUT` and `DELETE

@@ -789,7 +789,7 @@ self-protection, not third-party or adversarial traffic.
 
 | `source` | `type` values |
 |---|---|
-| `tokenfuse` | `budget_exhausted` · `sustained_loop` · `spend_spike` · `fanout_explosion` · `breaker_tripped` (medium) · `dlp_block` · `taint_block` · `mcp_drift` · `identity_mismatch` (high) · `tool_call` (low) · `budget_threshold` (medium) · `run_killed` (high) · `unit_cap_exceeded` (high) · `policy_deny` (high) · `dependency_failed` (high) · `taint_shadow` (medium) · `taint_raised` (low) · `taint_cleared` (high) · `breaker_shadow` (medium) · `run_stalled` (medium) · `call_retained` (medium) · `retained_closed` (high) · `dlp_shadow` (medium) |
+| `tokenfuse` | `budget_exhausted` · `sustained_loop` · `spend_spike` · `fanout_explosion` · `breaker_tripped` (medium) · `dlp_block` · `taint_block` · `mcp_drift` · `identity_mismatch` (high) · `tool_call` (low) · `budget_threshold` (medium) · `run_killed` (high) · `unit_cap_exceeded` (high) · `policy_deny` (high) · `dependency_failed` (high) · `taint_shadow` (medium) · `taint_raised` (low) · `taint_cleared` (high) · `breaker_shadow` (medium) · `run_stalled` (medium) · `call_retained` (medium) · `retained_closed` (high) · `dlp_shadow` (medium) · `rate_limited` (medium) · `price_fallback` (low) |
 | `engram` | `memory_written` · `reflection_run` · `contradiction_found` · `memory_forgotten` |
 | `idryx` | `identity_finding` (severity per finding) |
 | `qryx` | `crypto_finding` · `crypto_drift` · `policy_violation` · `evidence_signed` |
@@ -1150,6 +1150,28 @@ kind to how often, `{"pii_card": 1, "pii_email": 1}`), `mode` (`shadow` or
 not `low`, since the text reached the provider (in `shadow`) or was rewritten
 on its way there (in `mask`); not `high`, which is `dlp_block`'s, since a shadow
 week paging on every finding is a week whose sender gets turned off.
+
+**`rate_limited` (medium)** is the gateway's answer 429 for a client key that
+went past its own rate or concurrency limit (@decided 2026-11-23). `data`:
+`key_id` (the key's identifier, never its value), `principal` (the agent the
+call named), `limit` (`rps` for calls per second, `concurrency` for calls in
+flight), `limit_value` (the limit that was reached), `retry_after_secs` (what
+the answer's `Retry-After` said) and `unreported_since_last` (how many further
+refusals of this kind were not written since the last event). At most one
+event per source per minute is written, as TokenFuse holds its other
+rate-limited findings to one a minute, so a caller in a tight loop produces a
+count, not a flood. `medium`, fixed: the call was refused, not forwarded, and
+the limit protects the gateway, not a budget, which `budget_exhausted`
+already speaks for.
+
+**`price_fallback` (low)** is the gateway pricing a call at its fallback rates
+because the model is not in its price book (@decided 2026-11-23). `data`:
+`model` (as the provider named it), `door` (`anthropic` or `openai`, the wire
+the call came in on) and `fallback_rates` (the rates the call was priced at).
+It is written once per model per process, so a missing price is a finding,
+not a stream. A call that names no agent writes no such event and is counted
+instead (6.1). `low`, fixed: the call was served and charged, possibly at the
+wrong price, which an operator corrects in the price book.
 
 **A caller that named no agent** is filed under the one reserved subject
 `agent://unidentified.invalid/caller` (@decided 2026-10-14). An event names an

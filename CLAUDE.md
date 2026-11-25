@@ -50,7 +50,7 @@ changes what an implementer would build, it is a spec change.
    co-author trailer naming the model that actually did the work.
 4. Push the branch, open a PR with `gh`.
 5. Wait for CI to go green.
-6. **Ask the user before merging.** Do not self-merge.
+6. **Merge when every required check is green on the current head** (squash, fresh base first). `@decided 2026-10-22`: the agent opens and merges its own PRs; tags, releases, publishing and anything that spends money still need the owner's explicit go.
 
 ## Gates
 

@@ -5,7 +5,7 @@
 **The thinnest possible shared fabric for AI-agent governance: one identifier, one delegation chain, one event envelope.**
 
 [![CI](https://github.com/TAIPANBOX/agent-passport/actions/workflows/ci.yml/badge.svg)](https://github.com/TAIPANBOX/agent-passport/actions/workflows/ci.yml)
-![Version](https://img.shields.io/badge/version-1.0-4493f8.svg)
+![Version](https://img.shields.io/badge/version-1.1-4493f8.svg)
 ![Spec](https://img.shields.io/badge/type-specification-2dd4bf.svg)
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)
 ![Status](https://img.shields.io/badge/status-accepted-success.svg)
@@ -412,6 +412,7 @@ compatibility, and SPEC.md §9 for the per-repo adoption cost estimate.
 - [x] adopted across the original four (TokenFuse, Engram, Idryx, Qryx all shipped) plus wave-2 (Wardryx, Verdryx, Mockryx shipped)
 - [x] Qryx: emitting findings as agent-event (`internal/exporter`: `crypto_finding` / `crypto_drift` / `policy_violation` / `evidence_signed`, v0.1, `--events` flag)
 - [x] 1.0 (2026-09-12): the SPIFFE mapping normative (SPEC.md §3.4); envelope v1.0 as v0.3's shape and Passport v1.0 with a closed top level (§6.4.1); the frozen surface named (§10); both version chains held by one gate with the one major-boundary narrowing known by name
+- [x] 1.1 (2026-11-25): registry rows appended in SPEC 6.2 (typryx, agent-conform chain events, keyryx witness and custody findings, tokenfuse and wardryx rows, costcrew `anomaly_hinted`); the checkpoint sidecar fixed by SPEC 6.5.1 and held by `scripts/checkpoint-vectors.sh`; no schema, field or enum changed
 - [x] a standalone conformance-check CLI/validator: `agent-conform` (`TAIPANBOX/agent-stack-go`'s `cmd/agent-conform`), full JSON Schema validation of Passport documents (v0.1, v1.0) and agent-event streams (v0.1, v0.2, v0.3, v1.0) against embedded copies of this repo's canonical schemas, and verifies event-stream `prev_hash` integrity chains (SPEC 6.5) with `agent-conform -chain <file>`; `agent-conform watch-dir` is the on-box verifier that alerts on a chain break
 
 ## License

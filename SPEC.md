@@ -1,6 +1,6 @@
 # Agent Passport: shared identity & event schema
 
-**Version:** 1.0 · 2026-09-12 (0.1 was 2026-07-09; what 1.0 freezes is section 10, what it changed is 6.4.1)
+**Version:** 1.1 · 2026-11-25 (1.0 was 2026-09-12, 0.1 was 2026-07-09; what 1.0 freezes is section 10, what it changed is 6.4.1; 1.1 appends registry rows (6.2) and adds the checkpoint sidecar (6.5.1))
 **Status:** accepted (design decisions resolved 2026-07-09, the 1.0 decisions in 8.1); adoption per source is the 6.2 registry, which is gated, not this line
 **Scope:** the TAIPANBOX agent-governance services registered in 6.2, and the bindings that vendor these schemas (agent-stack-go in Go; TokenFuse in Rust; Engram and Verdryx in Python)
 
